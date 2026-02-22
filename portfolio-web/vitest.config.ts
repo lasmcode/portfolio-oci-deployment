@@ -4,11 +4,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   test: {
-    // Esto permite usar 'test', 'expect' y 'describe' sin importarlos en cada archivo
     globals: true, 
-    // Simula el navegador para que React Testing Library funcione
     environment: 'jsdom',
-    // Carga configuraciones adicionales como los matchers de jest-dom
     setupFiles: ['./vitest.setup.ts'],
   },
 })
