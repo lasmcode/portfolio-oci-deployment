@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/* Paleta moderna y estratégica */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0f172a; /* Fondo principal */
+  --foreground: #ffffff; /* Texto principal */
+  --panel: #1e293b;      /* Paneles/secciones */
+  --card: #232946;       /* Tarjetas */
+  --text-secondary: #cbd5e1; /* Texto secundario */
+  --primary: #3b82f6;    /* Azul vibrante */
+  --secondary: #a78bfa;  /* Violeta suave */
+  --accent: #f59e42;     /* Naranja suave */
+  --success: #22c55e;    /* Verde */
+  --warning: #fbbf24;    /* Amarillo */
+  --error: #ef4444;      /* Rojo */
 }
 
 @theme inline {
@@ -12,15 +22,25 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Puedes agregar variantes para light/dark si lo deseas */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #ffffff;
+    --panel: #1e293b;
+    --card: #232946;
+    --text-secondary: #cbd5e1;
+    --primary: #3b82f6;
+    --secondary: #a78bfa;
+    --accent: #f59e42;
+    --success: #22c55e;
+    --warning: #fbbf24;
+    --error: #ef4444;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

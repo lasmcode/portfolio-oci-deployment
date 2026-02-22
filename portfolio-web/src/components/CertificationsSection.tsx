@@ -9,11 +9,11 @@ export default function CertificationsSection({ data }: CertificationsSectionPro
   if (!data || data.length === 0) return null;
 
   return (
-    <section id="certifications" className="py-20 px-6">
+    <section id="certifications" className="py-20 px-6 rounded-3xl shadow-lg" style={{ background: 'rgba(30,41,59,0.7)' }}>
       <div className="max-w-6xl mx-auto">
         <div className="mb-12">
-          <h2 className="text-4xl font-bold text-white mb-2">Certificaciones</h2>
-          <div className="h-1 w-20 bg-blue-500 rounded"></div>
+          <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>Certificaciones</h2>
+          <div className="h-1 w-20 rounded" style={{ background: 'var(--primary)' }}></div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

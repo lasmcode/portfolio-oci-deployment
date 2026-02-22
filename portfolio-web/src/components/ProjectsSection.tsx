@@ -11,11 +11,11 @@ export default function ProjectsSection({ data }: ProjectsSectionProps) {
   if (!data || data.length === 0) return null;
 
   return (
-    <section id={SECTIONS.PROJECTS} className="py-20 px-6 bg-gray-900/30">
+    <section id={SECTIONS.PROJECTS} className="py-20 px-6 rounded-3xl shadow-lg" style={{ background: 'rgba(30,41,59,0.7)' }}>
       <div className="max-w-6xl mx-auto">
         <div className="mb-12">
-          <h2 className="text-4xl font-bold text-white mb-2">Proyectos Destacados</h2>
-          <div className="h-1 w-20 bg-blue-500 rounded"></div>
+          <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>Proyectos Destacados</h2>
+          <div className="h-1 w-20 rounded" style={{ background: 'var(--primary)' }}></div>
         </div>
         
         {/* Grid optimizado: 1 columna en móvil, 2 en tablets/desktop */}

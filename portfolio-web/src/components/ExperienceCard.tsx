@@ -26,24 +26,24 @@ export default function ExperienceCard({ experience }: ExperienceCardProps) {
   return (
     <div className="relative pl-8 pb-12 last:pb-0">
       {/* El "punto" de la línea de tiempo */}
-      <div className="absolute -left-[9px] top-1 w-4 h-4 bg-blue-500 rounded-full border-4 border-black"></div>
+      <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4" style={{ background: 'var(--primary)', borderColor: 'var(--panel)' }}></div>
 
-      <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-800 hover:border-blue-500/50 transition-colors">
+      <div className="p-6 rounded-3xl border shadow-md transition-colors" style={{ background: 'rgba(30,41,59,0.7)', borderColor: 'var(--panel)' }}>
         <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4 gap-2">
           <div>
-            <h3 className="text-2xl font-bold text-white">
+            <h3 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
               {experience.job_title}
             </h3>
-            <p className="text-blue-400 font-medium text-lg">
+            <p className="font-medium text-lg" style={{ color: 'var(--primary)' }}>
               {experience.enterprise}
             </p>
           </div>
-          <span className="text-sm font-mono text-gray-500 bg-gray-800 px-3 py-1 rounded-full whitespace-nowrap">
+          <span className="text-sm font-mono px-3 py-1 rounded-full whitespace-nowrap" style={{ background: 'var(--panel)', color: 'var(--text-secondary)' }}>
             {startDate} — {endDate}
           </span>
         </div>
 
-        <p className="text-gray-400 leading-relaxed whitespace-pre-line">
+        <p className="leading-relaxed whitespace-pre-line" style={{ color: 'var(--text-secondary)' }}>
           {experience.description}
         </p>
       </div>

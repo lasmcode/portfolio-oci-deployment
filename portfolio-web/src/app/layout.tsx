@@ -16,13 +16,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className="scroll-smooth">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-white min-h-screen flex flex-col`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-white min-h-screen flex flex-col`} style={{ backgroundColor: '#0f172a' }}>
         <Navigation />
-      
-        <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main
+          className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          style={{ backgroundColor: '#0f172a' }}
+        >
           {children}
-        </main>    
-        
+        </main>
       </body>
     </html>
   );
