@@ -1,0 +1,61 @@
+# Environment files
+.env*
+.env.local
+.env.prod
+
+# Terraform
+*.tfstate*
+*.tfvars*
+.terraform/
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+
+# Keys and sensitive files
+*.key
+*.pem
+*.backup
+
+# Node.js & Yarn
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+
+# Misc
+.DS_Store
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# portfolio-web specific
+portfolio-web/.env*
+portfolio-web/node_modules/
+portfolio-web/.next/
+portfolio-web/out/
+portfolio-web/build/
+portfolio-web/npm-debug.log*
+portfolio-web/yarn-debug.log*
+portfolio-web/yarn-error.log*
+portfolio-web/.vercel
+portfolio-web/*.tsbuildinfo
