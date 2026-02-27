@@ -1,0 +1,61 @@
+services:
+  
+  nextjs:
+    # Reemplaza 'tu-usuario' con tu usuario de GitHub en minúsculas
+    image: ghcr.io/lasmcode/portfolio-web:latest
+    container_name: portfolio-web
+    # Carga todas las variables (OCI_DB_USER, OCI_DB_PASSWORD, TNS_ADMIN, etc.)
+    # desde el archivo que Terraform genera en la instancia.
+    env_file:
+      - ./config/.env.local
+    volumes:
+      # Monta el wallet desde la ruta absoluta en el host a la ruta que espera TNS_ADMIN.
+      - /opt/oracle/wallet:/wallet:ro
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - portfolio-network    
+    
+  
+
+  nginx:
+    image: nginx:${NGINX_VERSION:-stable-alpine}
+    container_name: portfolio-nginx
+    restart: unless-stopped
+    env_file: ./config/.env.local
+    depends_on:
+      nextjs:
+        condition: service_healthy
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:rw
+      - /opt/certs/cloudflare:/etc/nginx/certs:ro
+      - ./logs/nginx:/var/log/nginx:rw    
+    networks:
+      - portfolio-network  
+    
+  # Servicio para actualización automática (CD)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup portfolio-web
+    restart: unless-stopped
+    environment:
+      - REPO_USER=${GITHUB_USER} # Opcional si es público
+      - REPO_PASS=${GITHUB_TOKEN} # Opcional si es público
+
+  
+
+networks:
+  portfolio-network:
+    driver: bridge

@@ -1,0 +1,197 @@
+
+
+# Redirect logs so you can debug if something goes wrong
+exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+echo "Starting configuration with Cloud-init..."
+
+
+apt-get update
+apt-get install -y python3-pip
+pip3 install oci-cli --upgrade
+
+# ---  Environment Setup ---
+# Set the OCI CLI to use Instance Principal for secure authentication
+export OCI_CLI_AUTH=instance_principal
+SECRET_OCID="${SSH_DEPLOY_KEY_OCID}" 
+
+# --- SSH Directory Preparation ---
+# Create .ssh directory with restricted permissions (drwx------)
+# Use 'install' to set owner and permissions in a single atomic step
+install -d -m 700 -o ubuntu -g ubuntu /home/ubuntu/.ssh
+
+# Create an empty id_rsa file with read/write permissions only for the owner
+install -m 600 -o ubuntu -g ubuntu /dev/null /home/ubuntu/.ssh/id_rsa
+
+# ---  Secure Secret Retrieval ---
+# Fetch the base64 encoded secret from OCI Vault and decode it directly into RAM
+# This prevents the key from being logged in Cloud-init metadata or logs
+SSH_KEY_DATA=$(oci secrets secret-bundle get --secret-id "$SECRET_OCID" \
+    --query 'data."secret-bundle-content".content' --raw-output | base64 --decode)
+
+# ---  Key Injection ---
+# Use a Here-Doc to write the multi-line RSA key to the file
+
+cat << EOF > /home/ubuntu/.ssh/id_rsa
+$SSH_KEY_DATA
+EOF
+
+# --- 5. GitHub Host Verification ---
+# Pre-populate known_hosts to prevent the "Host key verification failed" interactive prompt
+# We use ed25519 for modern security standards
+ssh-keyscan -t ed25519 github.com >> /home/ubuntu/.ssh/known_hosts
+chown ubuntu:ubuntu /home/ubuntu/.ssh/known_hosts
+
+# --- 6. Repository Deployment ---
+# Execute git clone as the 'ubuntu' user to ensure correct file ownership
+su - ubuntu -c "git clone ${GITHUB_REPO} /home/ubuntu/portfolio-oci-deployment"
+
+# --- 7. Forensic Cleanup ---
+# Overwrite the private key with random data before unlinking it (shredding)
+# This ensures the key cannot be recovered from the disk blocks
+shred -u /home/ubuntu/.ssh/id_rsa
+
+# Clear the sensitive variable from the current shell memory
+unset SSH_KEY_DATA
+# 4. Run the installation script
+cd /home/ubuntu/portfolio-oci-deployment
+chmod +x install-docker-ubuntu.sh
+./install-docker-ubuntu.sh
+
+# CRITICAL FIX: Explicitly add the ubuntu user to the docker group
+usermod -aG docker ubuntu
+
+# Create directory for Cloudflare certificates
+mkdir -p /opt/certs/cloudflare
+
+# Write the certificate and key (injected by Terraform)
+# We use the variables defined in the metadata block of compute.tf 
+cat <<EOF > /opt/certs/cloudflare/cloudflare-origin.pem
+${CLOUDFLARE_CERT}
+EOF
+
+cat <<EOF > /opt/certs/cloudflare/cloudflare-origin.key
+${CLOUDFLARE_KEY}
+EOF
+
+# Adjust permissions (Strict Security)
+# 600: Only root can read/write the private key
+# 644: The certificate can be read by Nginx or other services
+chmod 600 /opt/certs/cloudflare/cloudflare-origin.key
+chmod 644 /opt/certs/cloudflare/cloudflare-origin.pem
+
+# Ensure the owner is root (or the user running your container)
+chown -R root:root /opt/certs/cloudflare
+
+# --- ORACLE WALLET SETUP ---
+echo "Configuring Oracle Wallet..."
+mkdir -p /opt/oracle/wallet
+
+# Decode and unzip the wallet injected by Terraform
+echo "${db_wallet_content}" | base64 -d > /opt/oracle/wallet/wallet.zip
+unzip -o /opt/oracle/wallet/wallet.zip -d /opt/oracle/wallet/
+
+# Set permissions so the Docker user (usually UID 1000 or 0) can read it
+chmod -R 755 /opt/oracle/wallet
+
+# --- DATABASE INITIALIZATION ---
+echo "Running Database Initialization Script..."
+
+# Write the injected SQL content to a file
+cat <<EOF > /opt/oracle/init.sql
+${init_sql_content}
+EOF
+
+# Execute the script using a temporary Docker container inside the OCI network
+docker run --rm \
+  -v /opt/oracle/wallet:/wallet \
+  -v /opt/oracle/init.sql:/init.sql \
+  -e TNS_ADMIN=/wallet \
+  gvenzl/oracle-instant-client:latest \
+  sqlplus -S admin/${db_password}@${db_service_name} @/init.sql
+
+echo "Generating .env.local configuration file..."
+
+# Ensure the configuration directory exists
+mkdir -p /home/ubuntu/portfolio-oci-deployment/config
+
+# Write the content using the injected values
+cat <<EOF > /home/ubuntu/portfolio-oci-deployment/config/.env.local
+# ORACLE AUTONOMOUS DATABASE CONFIG
+OCI_DB_USER=admin
+OCI_DB_PASSWORD=${db_password}
+# Connection string uses the TNS alias defined in tnsnames.ora inside the wallet
+OCI_DB_CONNECTION_STRING=${db_service_name}
+# Path inside the Docker container (we will mount /opt/oracle/wallet to /wallet)
+TNS_ADMIN=/wallet
+
+# portfolio CONFIG
+portfolio_URL=https://${portfolio_domain}
+NODE_ENV=production
+
+# GitHub credentials for private repo/packages
+GITHUB_USER=${github_user}
+GITHUB_TOKEN=${GIT_TOKEN_SECRET_OCID}
+
+DOMAIN=${portfolio_domain}
+DOMAIN_WWW=www.${portfolio_domain}
+EOF
+
+# File security
+chown ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment/config/.env.local
+chmod 600 /home/ubuntu/portfolio-oci-deployment/config/.env.local
+
+# Configure Firewall (IPTables) to allow HTTP/HTTPS traffic
+# OCI images block ports by default at the OS level.
+iptables -I INPUT 6 -m conntrack --ctstate NEW -p tcp --dport 80 -j ACCEPT
+iptables -I INPUT 6 -m conntrack --ctstate NEW -p tcp --dport 443 -j ACCEPT
+netfilter-persistent save
+
+# --- PERSISTENCE CONFIGURATION (VOLUME BLOCK) ---
+echo "Configuring persistent data volume..."
+
+# Wait for the device to become available (/dev/sdb is the standard for the first paravirtualized attachment)
+while [ ! -b /dev/sdb ]; do echo "Waiting for memory disk"; sleep 5; done
+
+# Format only if there is no file system (to avoid deleting data in future recreations)
+if ! blkid /dev/sdb; then
+    echo "Formatting a new memory disk..."
+    mkfs.ext4 /dev/sdb
+fi
+
+# Create mounting point and mount
+mkdir -p /mnt/portfolio_data
+mount /dev/sdb /mnt/portfolio_data
+
+# Agregar a fstab para que se monte solo al reiniciar
+if ! grep -q "/dev/sdb" /etc/fstab; then
+    echo "/dev/sdb /mnt/portfolio_data ext4 defaults,nofail 0 2" >> /etc/fstab
+fi
+
+# Create a general purpose directory on the persistent volume if needed
+# For now, we are not using it directly in docker-compose, but it's ready.
+mkdir -p /mnt/portfolio_data/docker_data
+chown -R ubuntu:ubuntu /mnt/portfolio_data
+
+# --- DOCKER AUTHENTICATION ---
+# Log in to GitHub Container Registry to pull the private image
+echo "Fetching GitHub Token from OCI Vault..."
+GITHUB_TOKEN_DATA=$(oci secrets secret-bundle get --secret-id "${GIT_TOKEN_SECRET_OCID}" \
+    --query 'data."secret-bundle-content".content' --raw-output --auth instance_principal | base64 --decode)
+
+# 2. Log in to GitHub Container Registry (GHCR)
+# We pipe the variable directly into docker login to keep it out of process logs
+echo "Logging into GitHub Container Registry..."
+echo "$GITHUB_TOKEN_DATA" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
+
+# 3. SECURITY: Clear the token from memory immediately
+unset GITHUB_TOKEN_DATA
+
+# Execute the deployment
+cd /home/ubuntu/portfolio-oci-deployment
+
+chown -R ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment
+
+chmod +x /home/ubuntu/portfolio-oci-deployment/run-docker-compose.sh
+
+su - ubuntu -c "cd /home/ubuntu/portfolio-oci-deployment && ./run-docker-compose.sh up"

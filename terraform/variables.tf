@@ -25,7 +25,7 @@ variable "fingerprint" {
 }
 
 variable "private_key_path" {
-  description = "The path to the private key file"
+  description = "Local path to OCI private key (.pem)."
   type        = string
   sensitive   = true
 }
@@ -62,20 +62,6 @@ variable "github_repo" {
   type        = string
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to the SSH public key file"
-  type        = string
-  default     = "~/.ssh/id_rsa.pub"
-  sensitive   = true
-}
-
-variable "ssh_private_key_path" {
-  description = "Path to the SSH private key file"
-  type        = string
-  default     = "~/.ssh/id_rsa"
-  sensitive   = true
-}
-
 variable "availability_domain_number" {
   description = "The availability domain number to use (1, 2, etc.)"
   type        = number
@@ -110,8 +96,8 @@ variable "portfolio_domain" {
   type        = string
 }
 
-variable "github_token" {
-  description = "GitHub Personal Access Token con permisos read:packages"
+variable "git_token_secret_ocid" {
+  description = "OCID of GitHub Personal Access Token con permisos read:packages in OCI Vault"
   type        = string
   sensitive   = true
 }
@@ -119,4 +105,16 @@ variable "github_token" {
 variable "github_user" {
   description = "GitHub username for Docker Registry authentication"
   type        = string
+}
+
+variable "ssh_deploy_key_ocid" {
+  description = "OCID of the SSH deploy key git in OCI Vault"
+  type        = string 
+  sensitive   = true
+}
+
+variable "admin_ssh_public_key_ocid" {
+  description = "OCID of the public SSH key for admin instance access"
+  type        = string
+  sensitive   = true
 }
