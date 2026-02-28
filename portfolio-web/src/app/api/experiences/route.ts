@@ -1,13 +1,13 @@
 /**
  * /api/experiences/route.ts - API endpoint para obtener experiencias laborales
- * 
+ *
  * RUTA: GET /api/experiences
- * 
+ *
  * FLUJO:
  * 1. Cliente hace request GET a /api/experiences
  * 2. Ejecuta query SQL ordenada por fecha descendente
  * 3. Retorna array JSON con todas las experiencias
- * 
+ *
  * RESPUESTA EXITOSA (200):
  * [
  *   {
@@ -21,7 +21,7 @@
  *   },
  *   ...más experiencias
  * ]
- * 
+ *
  * RESPUESTA VACÍA (200):
  * []
  */
@@ -35,8 +35,8 @@ export async function GET() {
   try {
     // Obtiene todas las experiencias del usuario ordenadas por fecha (más recientes primero)
     const experiences = await executeQuery<Experience>(
-      `SELECT * FROM experiences 
-       WHERE user_id = :user_id 
+      `SELECT * FROM experiences
+       WHERE user_id = :user_id
        ORDER BY start_date DESC`,
       [APP_CONFIG.USER_ID]
     );

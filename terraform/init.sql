@@ -1,8 +1,10 @@
-
 -- =================================================================
 -- Database Initialization Script for Portfolio
 -- Database: Oracle
 -- =================================================================
+
+-- Disable substitution variables (& character in strings would trigger prompts)
+SET DEFINE OFF
 
 BEGIN
    EXECUTE IMMEDIATE 'DROP TABLE social_links PURGE';
@@ -115,11 +117,11 @@ INSERT INTO projects (user_id, name, description, image_url, github_link, demo_l
 VALUES (1, 'Plataforma de E-commerce', 'Una tienda online completa con carrito de compras, pasarela de pago y panel de administración. Construida con un enfoque en el rendimiento y la experiencia de usuario.', '/images/projects/ecommerce.jpg', 'https://github.com/your-user/ecommerce-project', NULL, 'React, Node.js, Express, PostgreSQL');
 
 INSERT INTO certifications (user_id, name, organization, url_file, badge_url, is_active)
-VALUES (1, 
-        'Oracle Cloud Infrastructure 2024 Foundations Associate', 
-        'Oracle', 
-        'https://catalog-education.oracle.com/...id=TU_ID', 
-        '/images/certs/oci-foundations.png', 
+VALUES (1,
+        'Oracle Cloud Infrastructure 2024 Foundations Associate',
+        'Oracle',
+        'https://catalog-education.oracle.com/...id=TU_ID',
+        '/images/certs/oci-foundations.png',
         1);
 
 -- Insert social links

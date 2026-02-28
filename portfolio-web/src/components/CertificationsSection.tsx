@@ -2,7 +2,7 @@ import CertificationCard from './CertificationCard';
 import { SECTIONS } from '@/utils/constants';
 
 interface CertificationsSectionProps {
-  data: any[]; 
+  data: any[];
 }
 
 export default function CertificationsSection({ data }: CertificationsSectionProps) {

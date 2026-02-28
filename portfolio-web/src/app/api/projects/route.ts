@@ -1,13 +1,13 @@
 /**
  * /api/projects/route.ts - API endpoint para obtener proyectos
- * 
+ *
  * RUTA: GET /api/projects
- * 
+ *
  * FLUJO:
  * 1. Cliente hace request GET a /api/projects
  * 2. Ejecuta query SQL ordenada por fecha de creación descendente
  * 3. Retorna array JSON con todos los proyectos
- * 
+ *
  * RESPUESTA EXITOSA (200):
  * [
  *   {
@@ -33,8 +33,8 @@ export async function GET() {
   try {
     // Obtiene todos los proyectos ordenados por fecha de creación (más recientes primero)
     const projects = await executeQuery<Project>(
-      `SELECT * FROM projects 
-       WHERE user_id = :user_id 
+      `SELECT * FROM projects
+       WHERE user_id = :user_id
        ORDER BY created_at DESC`,
       [APP_CONFIG.USER_ID]
     );

@@ -1,197 +1,297 @@
-
+#!/bin/bash
 
 # Redirect logs so you can debug if something goes wrong
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 echo "Starting configuration with Cloud-init..."
 
-
+# =================================================================
+# SYSTEM PACKAGES
+# =================================================================
 apt-get update
-apt-get install -y python3-pip
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  python3-pip unzip curl wget \
+  alien libaio1 \
+  iptables-persistent netfilter-persistent
+
 pip3 install oci-cli --upgrade
 
-# ---  Environment Setup ---
-# Set the OCI CLI to use Instance Principal for secure authentication
+# =================================================================
+# ENVIRONMENT SETUP
+# =================================================================
 export OCI_CLI_AUTH=instance_principal
-SECRET_OCID="${SSH_DEPLOY_KEY_OCID}" 
 
-# --- SSH Directory Preparation ---
-# Create .ssh directory with restricted permissions (drwx------)
-# Use 'install' to set owner and permissions in a single atomic step
+# =================================================================
+# SSH DIRECTORY PREPARATION
+# =================================================================
 install -d -m 700 -o ubuntu -g ubuntu /home/ubuntu/.ssh
 
-# Create an empty id_rsa file with read/write permissions only for the owner
-install -m 600 -o ubuntu -g ubuntu /dev/null /home/ubuntu/.ssh/id_rsa
+# =================================================================
+# SECURE SECRET RETRIEVAL (SSH Deploy Key from Vault)
+# =================================================================
+SSH_KEY_DATA=$(oci secrets secret-bundle get \
+    --secret-id "${SSH_DEPLOY_KEY_OCID}" \
+    --query 'data."secret-bundle-content".content' \
+    --raw-output | base64 --decode)
 
-# ---  Secure Secret Retrieval ---
-# Fetch the base64 encoded secret from OCI Vault and decode it directly into RAM
-# This prevents the key from being logged in Cloud-init metadata or logs
-SSH_KEY_DATA=$(oci secrets secret-bundle get --secret-id "$SECRET_OCID" \
-    --query 'data."secret-bundle-content".content' --raw-output | base64 --decode)
+# Use printf to safely write multiline key without heredoc variable conflicts
+printf '%s\n' "$SSH_KEY_DATA" > /home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
 
-# ---  Key Injection ---
-# Use a Here-Doc to write the multi-line RSA key to the file
-
-cat << EOF > /home/ubuntu/.ssh/id_rsa
-$SSH_KEY_DATA
-EOF
-
-# --- 5. GitHub Host Verification ---
-# Pre-populate known_hosts to prevent the "Host key verification failed" interactive prompt
-# We use ed25519 for modern security standards
+# =================================================================
+# GITHUB HOST VERIFICATION
+# =================================================================
 ssh-keyscan -t ed25519 github.com >> /home/ubuntu/.ssh/known_hosts
 chown ubuntu:ubuntu /home/ubuntu/.ssh/known_hosts
 
-# --- 6. Repository Deployment ---
-# Execute git clone as the 'ubuntu' user to ensure correct file ownership
+# =================================================================
+# REPOSITORY DEPLOYMENT
+# =================================================================
 su - ubuntu -c "git clone ${GITHUB_REPO} /home/ubuntu/portfolio-oci-deployment"
 
-# --- 7. Forensic Cleanup ---
-# Overwrite the private key with random data before unlinking it (shredding)
-# This ensures the key cannot be recovered from the disk blocks
+# =================================================================
+# FORENSIC CLEANUP (SSH key)
+# =================================================================
 shred -u /home/ubuntu/.ssh/id_rsa
-
-# Clear the sensitive variable from the current shell memory
 unset SSH_KEY_DATA
-# 4. Run the installation script
+
+# =================================================================
+# DOCKER INSTALLATION
+# =================================================================
 cd /home/ubuntu/portfolio-oci-deployment
 chmod +x install-docker-ubuntu.sh
 ./install-docker-ubuntu.sh
-
-# CRITICAL FIX: Explicitly add the ubuntu user to the docker group
 usermod -aG docker ubuntu
 
-# Create directory for Cloudflare certificates
+# =================================================================
+# CLOUDFLARE CERTIFICATES
+# =================================================================
 mkdir -p /opt/certs/cloudflare
 
-# Write the certificate and key (injected by Terraform)
-# We use the variables defined in the metadata block of compute.tf 
-cat <<EOF > /opt/certs/cloudflare/cloudflare-origin.pem
-${CLOUDFLARE_CERT}
-EOF
+# Use printf to safely write PEM content (avoids heredoc issues with special chars)
+printf '%s\n' "${CLOUDFLARE_CERT}" > /opt/certs/cloudflare/cloudflare-origin.pem
+printf '%s\n' "${CLOUDFLARE_KEY}"  > /opt/certs/cloudflare/cloudflare-origin.key
 
-cat <<EOF > /opt/certs/cloudflare/cloudflare-origin.key
-${CLOUDFLARE_KEY}
-EOF
-
-# Adjust permissions (Strict Security)
-# 600: Only root can read/write the private key
-# 644: The certificate can be read by Nginx or other services
 chmod 600 /opt/certs/cloudflare/cloudflare-origin.key
 chmod 644 /opt/certs/cloudflare/cloudflare-origin.pem
-
-# Ensure the owner is root (or the user running your container)
 chown -R root:root /opt/certs/cloudflare
 
-# --- ORACLE WALLET SETUP ---
+# =================================================================
+# ORACLE INSTANT CLIENT INSTALLATION (via yum.oracle.com — public, no login)
+# =================================================================
+echo "Installing Oracle Instant Client 21 and SQLPlus..."
+
+apt-get install -y libaio1 rpm2cpio cpio
+
+cd /tmp
+YUM_BASE="https://yum.oracle.com/repo/OracleLinux/OL8/oracle/instantclient21/x86_64/getPackage"
+wget -q "$YUM_BASE/oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm"   -O ic-basic.rpm
+wget -q "$YUM_BASE/oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm" -O ic-sqlplus.rpm
+
+# Verify downloads are real RPMs (must be > 500KB)
+BASIC_SIZE=$(stat -c%s /tmp/ic-basic.rpm 2>/dev/null || echo 0)
+if [ "$BASIC_SIZE" -lt 500000 ]; then
+  echo "ERROR: Oracle Instant Client RPM download failed. Size: $BASIC_SIZE bytes. Aborting."
+  exit 1
+fi
+
+# Extract RPMs directly into filesystem
+mkdir -p /tmp/ic-extract
+rpm2cpio /tmp/ic-basic.rpm   | cpio -idm -D /tmp/ic-extract/
+rpm2cpio /tmp/ic-sqlplus.rpm | cpio -idm -D /tmp/ic-extract/
+cp -r /tmp/ic-extract/usr/* /usr/
+rm -rf /tmp/ic-extract /tmp/ic-basic.rpm /tmp/ic-sqlplus.rpm
+
+# Register shared libraries
+echo "/usr/lib/oracle/21/client64/lib" > /etc/ld.so.conf.d/oracle-instantclient.conf
+ldconfig
+
+# Export for this cloud-init session
+export LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib:$${LD_LIBRARY_PATH}
+export PATH=/usr/lib/oracle/21/client64/bin:$${PATH}
+
+# Persist permanently for all future sessions
+cat > /etc/profile.d/oracle-client.sh << 'PROFEOF'
+export LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib:$LD_LIBRARY_PATH
+export PATH=/usr/lib/oracle/21/client64/bin:$PATH
+PROFEOF
+chmod +x /etc/profile.d/oracle-client.sh
+
+# Verify sqlplus is available
+if ! command -v sqlplus &>/dev/null; then
+  echo "ERROR: sqlplus not found after installation. Aborting."
+  exit 1
+fi
+echo "SQLPlus installed: $(sqlplus -V 2>&1 | head -1)"
+
+# =================================================================
+# ORACLE WALLET SETUP
+# =================================================================
 echo "Configuring Oracle Wallet..."
 mkdir -p /opt/oracle/wallet
 
-# Decode and unzip the wallet injected by Terraform
-echo "${db_wallet_content}" | base64 -d > /opt/oracle/wallet/wallet.zip
+oci db autonomous-database generate-wallet \
+  --autonomous-database-id "${db_id}" \
+  --file /opt/oracle/wallet/wallet.zip \
+  --password "${wallet_password}" \
+  --auth instance_principal
+
 unzip -o /opt/oracle/wallet/wallet.zip -d /opt/oracle/wallet/
 
-# Set permissions so the Docker user (usually UID 1000 or 0) can read it
-chmod -R 755 /opt/oracle/wallet
+# CRITICAL FIX: Oracle generates sqlnet.ora with '?/network/admin' placeholder
+# which breaks the connection. Replace with the real wallet path.
+tee /opt/oracle/wallet/sqlnet.ora << 'NETEOF'
+WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="/opt/oracle/wallet")))
+SSL_SERVER_DN_MATCH=yes
+NETEOF
 
-# --- DATABASE INITIALIZATION ---
+# Set permissions so ubuntu user can read wallet files
+chmod 755 /opt/oracle/wallet
+chmod 644 /opt/oracle/wallet/*
+chown -R ubuntu:ubuntu /opt/oracle/wallet
+
+export TNS_ADMIN=/opt/oracle/wallet
+
+# =================================================================
+# DATABASE CONNECTION CHECK (native sqlplus)
+# =================================================================
+echo "Verifying Database Connection..."
+MAX_RETRIES=5
+RETRY_COUNT=0
+CONNECTED=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  OUTPUT=$(printf "SELECT 'Connection OK' FROM DUAL;\nEXIT\n" | \
+    sqlplus -L -S "admin/${db_password}@${db_service_name}" 2>&1)
+
+  if echo "$OUTPUT" | grep -q "Connection OK"; then
+    echo "Database connection verified."
+    CONNECTED=true
+    break
+  else
+    echo "Connection failed. Retrying in 10 seconds... ($((RETRY_COUNT+1))/$MAX_RETRIES)"
+    echo "Error details: $OUTPUT"
+    sleep 10
+    RETRY_COUNT=$((RETRY_COUNT+1))
+  fi
+done
+
+if [ "$CONNECTED" = false ]; then
+  echo "CRITICAL ERROR: Unable to connect to Oracle Database after $MAX_RETRIES attempts."
+  exit 1
+fi
+
+# =================================================================
+# DATABASE INITIALIZATION (native sqlplus)
+# =================================================================
 echo "Running Database Initialization Script..."
 
-# Write the injected SQL content to a file
-cat <<EOF > /opt/oracle/init.sql
+cat > /opt/oracle/init.sql << SQLEOF
 ${init_sql_content}
-EOF
+SQLEOF
 
-# Execute the script using a temporary Docker container inside the OCI network
-docker run --rm \
-  -v /opt/oracle/wallet:/wallet \
-  -v /opt/oracle/init.sql:/init.sql \
-  -e TNS_ADMIN=/wallet \
-  gvenzl/oracle-instant-client:latest \
-  sqlplus -S admin/${db_password}@${db_service_name} @/init.sql
+sqlplus -S "admin/${db_password}@${db_service_name}" @/opt/oracle/init.sql
+echo "Database initialization complete."
 
+# =================================================================
+# .env.local GENERATION
+# =================================================================
 echo "Generating .env.local configuration file..."
-
-# Ensure the configuration directory exists
 mkdir -p /home/ubuntu/portfolio-oci-deployment/config
 
-# Write the content using the injected values
-cat <<EOF > /home/ubuntu/portfolio-oci-deployment/config/.env.local
+# Extract the full connection string for the service alias from tnsnames.ora.
+# oracledb Thin mode does not resolve TNS aliases — needs the full (description=...) string.
+DB_CONNECT_STRING=$(grep -i "^${db_service_name}" /opt/oracle/wallet/tnsnames.ora \
+  | sed 's/^[^=]*=[ ]*//')
+
+if [ -z "$DB_CONNECT_STRING" ]; then
+  echo "ERROR: Could not extract connection string for '${db_service_name}' from tnsnames.ora"
+  grep -oP '^[a-zA-Z0-9_]+(?= =)' /opt/oracle/wallet/tnsnames.ora || true
+  exit 1
+fi
+echo "Connection string extracted for: ${db_service_name}"
+
+cat > /home/ubuntu/portfolio-oci-deployment/config/.env.local << EOF
 # ORACLE AUTONOMOUS DATABASE CONFIG
 OCI_DB_USER=admin
 OCI_DB_PASSWORD=${db_password}
-# Connection string uses the TNS alias defined in tnsnames.ora inside the wallet
-OCI_DB_CONNECTION_STRING=${db_service_name}
-# Path inside the Docker container (we will mount /opt/oracle/wallet to /wallet)
+# Full connection string from tnsnames.ora (required for oracledb Thin mode)
+OCI_DB_CONNECTION_STRING=$DB_CONNECT_STRING
 TNS_ADMIN=/wallet
 
-# portfolio CONFIG
-portfolio_URL=https://${portfolio_domain}
+# PORTFOLIO CONFIG
+PORTFOLIO_URL=https://${portfolio_domain}
 NODE_ENV=production
 
-# GitHub credentials for private repo/packages
-GITHUB_USER=${github_user}
+# GitHub credentials
+GITHUB_USER=${GITHUB_USER}
 GITHUB_TOKEN=${GIT_TOKEN_SECRET_OCID}
 
 DOMAIN=${portfolio_domain}
 DOMAIN_WWW=www.${portfolio_domain}
 EOF
 
-# File security
 chown ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment/config/.env.local
 chmod 600 /home/ubuntu/portfolio-oci-deployment/config/.env.local
 
-# Configure Firewall (IPTables) to allow HTTP/HTTPS traffic
-# OCI images block ports by default at the OS level.
-iptables -I INPUT 6 -m conntrack --ctstate NEW -p tcp --dport 80 -j ACCEPT
+# =================================================================
+# FIREWALL
+# =================================================================
+iptables -I INPUT 6 -m conntrack --ctstate NEW -p tcp --dport 80  -j ACCEPT
 iptables -I INPUT 6 -m conntrack --ctstate NEW -p tcp --dport 443 -j ACCEPT
 netfilter-persistent save
 
-# --- PERSISTENCE CONFIGURATION (VOLUME BLOCK) ---
+# =================================================================
+# PERSISTENT BLOCK VOLUME
+# =================================================================
 echo "Configuring persistent data volume..."
 
-# Wait for the device to become available (/dev/sdb is the standard for the first paravirtualized attachment)
-while [ ! -b /dev/sdb ]; do echo "Waiting for memory disk"; sleep 5; done
+WAIT=0
+while [ ! -b /dev/sdb ] && [ $WAIT -lt 60 ]; do
+  echo "Waiting for block volume /dev/sdb... ($${WAIT}s)"
+  sleep 5
+  WAIT=$((WAIT+5))
+done
 
-# Format only if there is no file system (to avoid deleting data in future recreations)
-if ! blkid /dev/sdb; then
-    echo "Formatting a new memory disk..."
+if [ ! -b /dev/sdb ]; then
+  echo "WARNING: Block volume /dev/sdb not found. Skipping mount."
+else
+  if ! blkid /dev/sdb; then
+    echo "Formatting new block volume..."
     mkfs.ext4 /dev/sdb
-fi
+  fi
 
-# Create mounting point and mount
-mkdir -p /mnt/portfolio_data
-mount /dev/sdb /mnt/portfolio_data
+  mkdir -p /mnt/portfolio_data
+  mount /dev/sdb /mnt/portfolio_data
 
-# Agregar a fstab para que se monte solo al reiniciar
-if ! grep -q "/dev/sdb" /etc/fstab; then
+  if ! grep -q "/dev/sdb" /etc/fstab; then
     echo "/dev/sdb /mnt/portfolio_data ext4 defaults,nofail 0 2" >> /etc/fstab
+  fi
+
+  mkdir -p /mnt/portfolio_data/docker_data
+  chown -R ubuntu:ubuntu /mnt/portfolio_data
 fi
 
-# Create a general purpose directory on the persistent volume if needed
-# For now, we are not using it directly in docker-compose, but it's ready.
-mkdir -p /mnt/portfolio_data/docker_data
-chown -R ubuntu:ubuntu /mnt/portfolio_data
-
-# --- DOCKER AUTHENTICATION ---
-# Log in to GitHub Container Registry to pull the private image
+# =================================================================
+# DOCKER AUTHENTICATION (GitHub Container Registry)
+# =================================================================
 echo "Fetching GitHub Token from OCI Vault..."
-GITHUB_TOKEN_DATA=$(oci secrets secret-bundle get --secret-id "${GIT_TOKEN_SECRET_OCID}" \
-    --query 'data."secret-bundle-content".content' --raw-output --auth instance_principal | base64 --decode)
+GITHUB_TOKEN_DATA=$(oci secrets secret-bundle get \
+    --secret-id "${GIT_TOKEN_SECRET_OCID}" \
+    --query 'data."secret-bundle-content".content' \
+    --raw-output --auth instance_principal | base64 --decode)
 
-# 2. Log in to GitHub Container Registry (GHCR)
-# We pipe the variable directly into docker login to keep it out of process logs
-echo "Logging into GitHub Container Registry..."
 echo "$GITHUB_TOKEN_DATA" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
-
-# 3. SECURITY: Clear the token from memory immediately
 unset GITHUB_TOKEN_DATA
 
-# Execute the deployment
+# =================================================================
+# DEPLOYMENT
+# =================================================================
 cd /home/ubuntu/portfolio-oci-deployment
-
 chown -R ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment
-
 chmod +x /home/ubuntu/portfolio-oci-deployment/run-docker-compose.sh
 
 su - ubuntu -c "cd /home/ubuntu/portfolio-oci-deployment && ./run-docker-compose.sh up"
+
+echo "Cloud-init completed successfully."

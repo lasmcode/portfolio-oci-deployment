@@ -24,15 +24,15 @@ export default function CertificationCard({ cert }: Props) {
         <h3 className="font-bold leading-tight group-hover:text-[var(--primary)] transition-colors" style={{ color: 'var(--foreground)' }}>
           {cert.name}
         </h3>
-        
-        <a 
+
+        <a
           href={cert.url_file}
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-mono flex items-center gap-1 transition-colors"
           style={{ color: 'var(--primary)' }}
         >
-          VERIFICAR CREDENCIAL 
+          VERIFICAR CREDENCIAL
           <span className="text-[10px]">↗</span>
         </a>
       </div>

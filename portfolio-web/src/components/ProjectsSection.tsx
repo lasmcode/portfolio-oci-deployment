@@ -17,7 +17,7 @@ export default function ProjectsSection({ data }: ProjectsSectionProps) {
           <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>Proyectos Destacados</h2>
           <div className="h-1 w-20 rounded" style={{ background: 'var(--primary)' }}></div>
         </div>
-        
+
         {/* Grid optimizado: 1 columna en móvil, 2 en tablets/desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {data.map((project, index) => (

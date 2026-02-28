@@ -1,12 +1,12 @@
 /**
  * /api/social-links/route.ts - API endpoint para obtener links sociales
- * 
+ *
  * RUTA: GET /api/social-links
- * 
+ *
  * RESPONSABILIDAD:
  * - Obtiene todos los links sociales del usuario
  * - Los muestra en el footer del portafolio
- * 
+ *
  * RESPUESTA:
  * [
  *   { "id": 1, "platform": "twitter", "url": "https://twitter.com/..." },
@@ -23,7 +23,7 @@ import { APP_CONFIG } from '@/utils/constantsServer';
 export async function GET() {
   try {
     const socialLinks = await executeQuery<SocialLink>(
-      `SELECT * FROM social_links 
+      `SELECT * FROM social_links
        WHERE user_id = :user_id`,
       [APP_CONFIG.USER_ID]
     );

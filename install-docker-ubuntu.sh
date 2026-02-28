@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # 1. Safely clean up old versions
 sudo apt-get remove -y docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc || true
 

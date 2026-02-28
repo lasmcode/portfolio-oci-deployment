@@ -12,11 +12,11 @@ export default function ExperienceCard({ experience }: ExperienceCardProps) {
   const formatDate = (date: Date | string) => {
     if (!date) return '';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    
+
     return dateObj.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
-      timeZone: 'UTC' 
+      timeZone: 'UTC'
     });
   };
 

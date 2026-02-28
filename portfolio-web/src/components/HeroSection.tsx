@@ -12,13 +12,13 @@ export default function HeroSection({ data }: HeroSectionProps) {
   if (!data) return null;
 
   return (
-    <section 
-      id={SECTIONS.HOME} 
+    <section
+      id={SECTIONS.HOME}
       className="min-h-[70vh] flex flex-col items-center justify-center px-6 pt-20 rounded-3xl shadow-lg"
       style={{ background: 'rgba(30,41,59,0.7)' }}
     >
       <div className="text-center max-w-3xl">
-      
+
         <div className="mb-8">
           <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] p-1">
             <div className="w-full h-full rounded-full flex items-center justify-center border-2" style={{ background: 'var(--panel)', borderColor: 'var(--card)' }}>

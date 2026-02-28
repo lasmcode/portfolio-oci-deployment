@@ -6,7 +6,7 @@ resource "oci_core_vcn" "portfolio_vcn" {
   dns_label      = "portfoliovcn"
 }
 
-# 2. Create the Internet Gateway 
+# 2. Create the Internet Gateway
 resource "oci_core_internet_gateway" "portfolio_ig" {
   compartment_id = var.compartment_id
   vcn_id         = oci_core_vcn.portfolio_vcn.id
@@ -23,7 +23,7 @@ resource "oci_core_route_table" "portfolio_public_route_table" {
     destination       = "0.0.0.0/0"
     destination_type  = "CIDR_BLOCK"
     network_entity_id = oci_core_internet_gateway.portfolio_ig.id
-  }  
+  }
 }
 
 # 4. Security: Open ports 22, 80 and 443
@@ -82,15 +82,15 @@ resource "oci_core_subnet" "portfolio_public_subnet" {
 
 # 6. Subnet Privada para ADB
 resource "oci_core_subnet" "portfolio_private_subnet" {
-  cidr_block     = cidrsubnet(var.vcn_cidr, 8, 2)  # Ej: 10.0.2.0/24
-  display_name   = "portfolio_private_subnet"
-  compartment_id = var.compartment_id
-  vcn_id         = oci_core_vcn.portfolio_vcn.id 
+  cidr_block                 = cidrsubnet(var.vcn_cidr, 8, 2) # Ej: 10.0.2.0/24
+  display_name               = "portfolio_private_subnet"
+  compartment_id             = var.compartment_id
+  vcn_id                     = oci_core_vcn.portfolio_vcn.id
   prohibit_public_ip_on_vnic = true
-  dns_label      = "privateport"
+  dns_label                  = "privateport"
 }
 
-# 7. NSG para ADB 
+# 7. NSG para ADB
 resource "oci_core_network_security_group" "adb_nsg" {
   compartment_id = var.compartment_id
   vcn_id         = oci_core_vcn.portfolio_vcn.id
@@ -101,10 +101,10 @@ resource "oci_core_network_security_group" "adb_nsg" {
 resource "oci_core_network_security_group_security_rule" "adb_ingress" {
   network_security_group_id = oci_core_network_security_group.adb_nsg.id
 
-  direction    = "INGRESS"
-  protocol     = "6"  # TCP
-  source_type  = "SUBNET"
-  source       = oci_core_subnet.portfolio_public_subnet.id  # Instancia web
+  direction   = "INGRESS"
+  protocol    = "6" # TCP
+  source_type = "CIDR_BLOCK"
+  source      = oci_core_subnet.portfolio_public_subnet.cidr_block # Instancia web
 
   tcp_options {
     destination_port_range {
@@ -118,8 +118,8 @@ resource "oci_core_network_security_group_security_rule" "adb_ingress" {
 resource "oci_core_network_security_group_security_rule" "adb_egress" {
   network_security_group_id = oci_core_network_security_group.adb_nsg.id
 
-  direction         = "EGRESS"
-  protocol          = "all"
-  destination       = "0.0.0.0/0"
-  destination_type  = "CIDR_BLOCK"
+  direction        = "EGRESS"
+  protocol         = "all"
+  destination      = "0.0.0.0/0"
+  destination_type = "CIDR_BLOCK"
 }

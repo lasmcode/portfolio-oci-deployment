@@ -3,7 +3,7 @@ output "validate_image" {
 }
 
 output "instance_id" {
-  value = oci_core_instance.portfolio_instance.id
+  value       = oci_core_instance.portfolio_instance.id
   description = "The OCID of the created instance"
 }
 

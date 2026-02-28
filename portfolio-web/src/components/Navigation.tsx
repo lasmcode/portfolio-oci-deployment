@@ -1,21 +1,21 @@
 /**
  * Navigation.tsx - Componente de navegación con smooth scroll
- * 
+ *
  * TIPO: Client Component ('use client')
  * - Necesita interactividad del navegador
  * - Accede a document.getElementById() del DOM
- * 
+ *
  * FUNCIONALIDAD:
  * - Navbar fijo en la parte superior
  * - Botones que hacen scroll suave hacia cada sección
  * - Estilos con Tailwind CSS
- * 
+ *
  * SECIONES DISPONIBLES:
  * - Home (hero)
  * - Experience
- * - Projects  
+ * - Projects
  * - About
- * 
+ *
  * USO EN page.tsx:
  * <Navigation />
  * (Se renderiza una sola vez en el layout)
@@ -48,7 +48,7 @@ export default function Navigation() {
         <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           AS.Dev
         </span>
-        
+
         <div className="hidden md:flex gap-8">
           {Object.entries(SECTIONS).map(([key, id]) => (
             <button

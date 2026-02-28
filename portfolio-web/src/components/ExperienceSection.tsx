@@ -7,9 +7,9 @@ interface ExperienceSectionProps {
 }
 
 export default function ExperienceSection({ data }: ExperienceSectionProps) {
-  
+
   if (!data || data.length === 0) {
-    return null; 
+    return null;
   }
 
   return (

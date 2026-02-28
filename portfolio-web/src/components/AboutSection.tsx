@@ -2,7 +2,7 @@ import { User } from '@/lib/types';
 import { SECTIONS } from '@/utils/constants';
 
 interface AboutSectionProps {
-  data: User; 
+  data: User;
 }
 
 export default function AboutSection({ data }: AboutSectionProps) {
@@ -16,17 +16,17 @@ export default function AboutSection({ data }: AboutSectionProps) {
           <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>Sobre Mí</h2>
           <div className="h-1 w-20 rounded" style={{ background: 'var(--primary)' }}></div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
-          
+
           <div className="md:col-span-2">
-            
+
             <p className="text-lg leading-relaxed mb-6 whitespace-pre-line" style={{ color: 'var(--text-secondary)' }}>
               {data.about}
             </p>
-            
+
             <p className="text-md leading-relaxed italic border-l-4 pl-4" style={{ color: 'var(--accent)', borderColor: 'var(--primary)' }}>
-              "Mi enfoque es crear experiencias digitales escalables, seguras y 
+              "Mi enfoque es crear experiencias digitales escalables, seguras y
               optimizadas, aprovechando el poder de la nube y las bases de datos modernas."
             </p>
           </div>

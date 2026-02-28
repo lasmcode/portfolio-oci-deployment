@@ -1,13 +1,13 @@
 /**
  * /api/user/route.ts - API endpoint para obtener información del usuario
- * 
+ *
  * RUTA: GET /api/user
- * 
+ *
  * FLUJO:
  * 1. Cliente hace request GET a /api/user
  * 2. Esta función ejecuta una query a la BD
  * 3. Retorna JSON con datos del usuario
- * 
+ *
  * RESPUESTA EXITOSA (200):
  * {
  *   "id": 1,
@@ -17,7 +17,7 @@
  *   "location": "San Francisco, USA",
  *   "email": "alejandro@example.com"
  * }
- * 
+ *
  * RESPUESTA ERROR (500):
  * { "error": "Internal Server Error" }
  */

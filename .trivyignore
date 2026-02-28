@@ -1,0 +1,8 @@
+# Archivos de variables de Terraform (Secretos locales)
+**/*.tfvars
+**/terraform.tfvars
+
+# Archivos de entorno (Variables locales de Docker/Next.js)
+**/.env
+**/.env.local
+**/config/.env.local

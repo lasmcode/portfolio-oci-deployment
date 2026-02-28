@@ -4,7 +4,7 @@ import { PORTFOLIO_QUERY, MOCK_DATA, APP_CONFIG } from '@/utils/constantsServer'
 import HeroSection from "@/components/HeroSection";
 import ExperienceSection from "@/components/ExperienceSection";
 import ProjectsSection from "@/components/ProjectsSection";
-import CertificationsSection from "@/components/CertificationsSection"; 
+import CertificationsSection from "@/components/CertificationsSection";
 import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
 
@@ -20,7 +20,7 @@ export default async function Home() {
 
     // Oracle retorna el JSON como un string en la columna FULL_DATA
     data = result?.FULL_DATA ? JSON.parse(result.FULL_DATA) : null;
-    
+
     if (!data) throw new Error("Empty data");
   } catch (error) {
     console.error("OCI Connection failed:", error);
@@ -37,7 +37,7 @@ export default async function Home() {
       )}
 
       {/* Repartimos la data unificada a cada componente */}
-      <HeroSection data={data.user} />     
+      <HeroSection data={data.user} />
 
       <ExperienceSection data={data.experiences} />
 
@@ -51,4 +51,3 @@ export default async function Home() {
     </div>
   );
 }
-

@@ -7,8 +7,8 @@ interface ProjectCardProps {
 
 export default function ProjectCard({ project }: ProjectCardProps) {
   // Separamos las tecnologías de forma segura
-  const technologies = project.technologies 
-    ? project.technologies.split(',').map(t => t.trim()) 
+  const technologies = project.technologies
+    ? project.technologies.split(',').map(t => t.trim())
     : [];
 
   return (

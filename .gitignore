@@ -59,3 +59,5 @@ portfolio-web/yarn-debug.log*
 portfolio-web/yarn-error.log*
 portfolio-web/.vercel
 portfolio-web/*.tsbuildinfo
+
+.pre-commit

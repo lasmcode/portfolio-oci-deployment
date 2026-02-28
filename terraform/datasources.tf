@@ -35,17 +35,23 @@ data "oci_core_private_ips" "portfolio_private_ip" {
 }
 
 # Fetch the SSH Public Key bundle from OCI Vault
-data "oci_secrets_secret_bundle" "admin_ssh_pub" {
+data "oci_secrets_secretbundle" "admin_ssh_pub" {
   secret_id = var.admin_ssh_public_key_ocid
 }
 
 # Local variable to handle decoding and keep the main code cleaner
 locals {
   # We decode the base64 content provided by the Vault
-  raw_ssh_key = base64decode(data.oci_secrets_secret_bundle.admin_ssh_pub.secret_bundle_content.0.content)
+  raw_ssh_key = base64decode(data.oci_secrets_secretbundle.admin_ssh_pub.secret_bundle_content.0.content)
 }
 
 
 locals {
   ubuntu_image_id = length(data.oci_core_images.ubuntu_images.images) > 0 ? data.oci_core_images.ubuntu_images.images[0].id : null
+}
+
+# Data source para obtener la IP Pública Reservada directamente.
+# Esto rompe el ciclo: Instancia -> ADB -> Recurso IP -> Instancia
+data "oci_core_public_ip" "reserved_ip" {
+  id = var.reserved_public_ip_ocid
 }

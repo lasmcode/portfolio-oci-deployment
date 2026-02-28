@@ -20,7 +20,7 @@ export default function Footer({ data }: FooterProps) {
   return (
     <footer className="border-t py-12 px-6 rounded-3xl shadow-lg" style={{ background: 'rgba(30,41,59,0.7)', borderColor: 'var(--panel)' }}>
       <div className="max-w-6xl mx-auto flex flex-col items-center">
-        
+
         <div className="flex gap-6 mb-8">
           {data?.map((link) => (
             <a
@@ -31,9 +31,9 @@ export default function Footer({ data }: FooterProps) {
               className="hover:scale-110 transition-transform"
             >
               {link.icon_url ? (
-                <img 
-                  src={link.icon_url} 
-                  alt={link.platform} 
+                <img
+                  src={link.icon_url}
+                  alt={link.platform}
                   className="w-8 h-8 object-contain filter invert opacity-70 hover:opacity-100"
                 />
               ) : (

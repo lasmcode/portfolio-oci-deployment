@@ -109,12 +109,18 @@ variable "github_user" {
 
 variable "ssh_deploy_key_ocid" {
   description = "OCID of the SSH deploy key git in OCI Vault"
-  type        = string 
+  type        = string
   sensitive   = true
 }
 
 variable "admin_ssh_public_key_ocid" {
   description = "OCID of the public SSH key for admin instance access"
   type        = string
+  sensitive   = true
+}
+
+variable "admin_home_public_ip" {
+  type = string
+  description = "Public IP address of the home network for administrative access"
   sensitive   = true
 }

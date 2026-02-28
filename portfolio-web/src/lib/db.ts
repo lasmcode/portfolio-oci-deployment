@@ -1,9 +1,9 @@
 /**
  * db.ts - Configuración y utilidades para conexión a OCI Autonomous Database
- * 
+ *
  * Este archivo centraliza todas las operaciones con la base de datos.
  * Usa oracledb para conectarse a Oracle Autonomous Database que provee OCI.
- * 
+ *
  * VARIABLES DE ENTORNO NECESARIAS en .env.local:
  * - OCI_DB_USER: Usuario de la BD
  * - OCI_DB_PASSWORD: Contraseña del usuario
@@ -62,11 +62,11 @@ async function getConnection() {
 
 /**
  * Ejecuta una query y retorna los resultados como objetos
- * 
+ *
  * @param query - Consulta SQL (usar :param para parámetros)
  * @param params - Array de parámetros para la query
  * @returns Array de objetos con los resultados
- * 
+ *
  * EJEMPLO:
  * const users = await executeQuery('SELECT * FROM users WHERE id = :id', [1]);
  */
