@@ -1,56 +1,52 @@
 /**
- * db.ts - Configuración y utilidades para conexión a OCI Autonomous Database
- *
- * Este archivo centraliza todas las operaciones con la base de datos.
- * Usa oracledb para conectarse a Oracle Autonomous Database que provee OCI.
- *
- * VARIABLES DE ENTORNO NECESARIAS en .env.local:
- * - OCI_DB_USER: Usuario de la BD
- * - OCI_DB_PASSWORD: Contraseña del usuario
- * - OCI_DB_CONNECTION_STRING: Connection string de OCI (ej: "adb-xyz.us-ashburn-1.oraclecloud.com:1522/dbname_high")
+ * db.ts - OCI Autonomous Database Configuration & Utilities
+ * * Manages Oracle Database connections using the 'oracledb' driver.
+ * Supports Thin mode, optimized for OCI Autonomous DB.
+ * * Required Environment Variables:
+ * - OCI_DB_USER, OCI_DB_PASSWORD, OCI_DB_CONNECTION_STRING
+ * - TNS_ADMIN (Wallet path), WALLET_PASSWORD
  */
 
 import oracledb from 'oracledb';
 
-// Configuración global de Oracle
-// Solo inicializa el cliente nativo (Thick) si se especifica la librería.
-// De lo contrario, usa el modo Thin (puro JavaScript) que es ideal para desarrollo local y Docker.
-if (process.env.ORACLE_CLIENT_LIB_DIR) {
-  oracledb.initOracleClient({
-    libDir: process.env.ORACLE_CLIENT_LIB_DIR,
-  });
-}
-
 let pool: oracledb.Pool | null = null;
 
 /**
- * Inicializa el pool de conexiones con OCI Autonomous Database
- * El pool mantiene varias conexiones abiertas para mejor rendimiento
+ * Initializes the connection pool if it doesn't exist.
+ * Validates environment variables before attempting connection.
  */
+
 async function initializePool() {
   if (pool) return pool;
 
   try {
+    
+    if (!process.env.OCI_DB_CONNECTION_STRING) {
+      throw new Error("Falta la variable OCI_DB_CONNECTION_STRING en el .env");
+    }
+
     pool = await oracledb.createPool({
       user: process.env.OCI_DB_USER,
       password: process.env.OCI_DB_PASSWORD,
       connectString: process.env.OCI_DB_CONNECTION_STRING,
-      poolMin: 1,
+      // TNS_ADMIN is the path to your Wallet folder. 
+      // In Docker it will be '/wallet', on local storage it will be your path.
+      walletLocation: process.env.TNS_ADMIN || '/wallet', 
+      walletPassword: process.env.WALLET_PASSWORD,
+      poolMin: 2,
       poolMax: 10,
       poolIncrement: 1,
     });
 
-    console.log('Pool de conexiones inicializado exitosamente');
+    console.log('✅ Pool de conexiones inicializado exitosamente');
     return pool;
   } catch (error) {
-    console.error('Error inicializando pool de conexiones:', error);
+    console.error('❌ Error inicializando el pool:', error);
     throw error;
   }
 }
-
 /**
- * Obtiene una conexión del pool
- * Si el pool no existe, lo crea primero
+ * Acquires a connection from the initialized pool.
  */
 async function getConnection() {
   const connectionPool = await initializePool();
@@ -61,22 +57,18 @@ async function getConnection() {
 }
 
 /**
- * Ejecuta una query y retorna los resultados como objetos
- *
- * @param query - Consulta SQL (usar :param para parámetros)
- * @param params - Array de parámetros para la query
- * @returns Array de objetos con los resultados
- *
- * EJEMPLO:
- * const users = await executeQuery('SELECT * FROM users WHERE id = :id', [1]);
+ * Executes a SQL query and returns results as an array of objects.
+ * Supports both positional (Array) and named (Object) bind parameters.
  */
 export async function executeQuery<T>(
   query: string,
-  params: any[] = []
+  params: any[] | Record<string, any> = [] // Cambiado para soportar objetos
 ): Promise<T[]> {
   let connection;
   try {
     connection = await getConnection();
+    // When passing an object { id: 1 }, Oracle will automatically map
+    // all instances of :id to the value 1.
     const result = await connection.execute(query, params, {
       outFormat: oracledb.OUT_FORMAT_OBJECT,
     });
@@ -92,19 +84,19 @@ export async function executeQuery<T>(
 }
 
 /**
- * Ejecuta una query que retorna una sola fila
- * Ideal para queries que sabes que traerán máximo 1 resultado
+ * Executes a SQL query and returns the first row or null if empty.
  */
 export async function executeQuerySingle<T>(
   query: string,
-  params: any[] = []
+  params: any[] | Record<string, any> = [] // Cambiado aquí también
 ): Promise<T | null> {
   const results = await executeQuery<T>(query, params);
   return results.length > 0 ? results[0] : null;
 }
 
 /**
- * Cierra el pool de conexiones (llamar cuando se apague la app)
+ * Gracefully shuts down the connection pool.
+ * Should be called during application teardown.
  */
 export async function closePool() {
   if (pool) {

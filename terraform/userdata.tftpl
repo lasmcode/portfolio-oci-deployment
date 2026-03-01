@@ -78,55 +78,11 @@ chmod 644 /opt/certs/cloudflare/cloudflare-origin.pem
 chown -R root:root /opt/certs/cloudflare
 
 # =================================================================
-# ORACLE INSTANT CLIENT INSTALLATION (via yum.oracle.com — public, no login)
-# =================================================================
-echo "Installing Oracle Instant Client 21 and SQLPlus..."
-
-apt-get install -y libaio1 rpm2cpio cpio
-
-cd /tmp
-YUM_BASE="https://yum.oracle.com/repo/OracleLinux/OL8/oracle/instantclient21/x86_64/getPackage"
-wget -q "$YUM_BASE/oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm"   -O ic-basic.rpm
-wget -q "$YUM_BASE/oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm" -O ic-sqlplus.rpm
-
-# Verify downloads are real RPMs (must be > 500KB)
-BASIC_SIZE=$(stat -c%s /tmp/ic-basic.rpm 2>/dev/null || echo 0)
-if [ "$BASIC_SIZE" -lt 500000 ]; then
-  echo "ERROR: Oracle Instant Client RPM download failed. Size: $BASIC_SIZE bytes. Aborting."
-  exit 1
-fi
-
-# Extract RPMs directly into filesystem
-mkdir -p /tmp/ic-extract
-rpm2cpio /tmp/ic-basic.rpm   | cpio -idm -D /tmp/ic-extract/
-rpm2cpio /tmp/ic-sqlplus.rpm | cpio -idm -D /tmp/ic-extract/
-cp -r /tmp/ic-extract/usr/* /usr/
-rm -rf /tmp/ic-extract /tmp/ic-basic.rpm /tmp/ic-sqlplus.rpm
-
-# Register shared libraries
-echo "/usr/lib/oracle/21/client64/lib" > /etc/ld.so.conf.d/oracle-instantclient.conf
-ldconfig
-
-# Export for this cloud-init session
-export LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib:$${LD_LIBRARY_PATH}
-export PATH=/usr/lib/oracle/21/client64/bin:$${PATH}
-
-# Persist permanently for all future sessions
-cat > /etc/profile.d/oracle-client.sh << 'PROFEOF'
-export LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib:$LD_LIBRARY_PATH
-export PATH=/usr/lib/oracle/21/client64/bin:$PATH
-PROFEOF
-chmod +x /etc/profile.d/oracle-client.sh
-
-# Verify sqlplus is available
-if ! command -v sqlplus &>/dev/null; then
-  echo "ERROR: sqlplus not found after installation. Aborting."
-  exit 1
-fi
-echo "SQLPlus installed: $(sqlplus -V 2>&1 | head -1)"
-
 # =================================================================
 # ORACLE WALLET SETUP
+# No sqlplus or Instant Client needed on the host.
+# Migrations run inside the Next.js container via scripts/migrate.js
+# using oracledb Thin mode — zero native dependencies.
 # =================================================================
 echo "Configuring Oracle Wallet..."
 mkdir -p /opt/oracle/wallet
@@ -139,60 +95,20 @@ oci db autonomous-database generate-wallet \
 
 unzip -o /opt/oracle/wallet/wallet.zip -d /opt/oracle/wallet/
 
-# CRITICAL FIX: Oracle generates sqlnet.ora with '?/network/admin' placeholder
-# which breaks the connection. Replace with the real wallet path.
+# Fix sqlnet.ora — Oracle generates it with '?/network/admin' placeholder.
+# The container mounts the wallet at /wallet so that path is used here.
 tee /opt/oracle/wallet/sqlnet.ora << 'NETEOF'
-WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="/opt/oracle/wallet")))
+WALLET_LOCATION = (SOURCE = (METHOD = file) (METHOD_DATA = (DIRECTORY="/wallet")))
 SSL_SERVER_DN_MATCH=yes
 NETEOF
 
-# Set permissions so ubuntu user can read wallet files
+# Permissions: ubuntu owns the wallet (systemd runs docker-compose as ubuntu)
 chmod 755 /opt/oracle/wallet
 chmod 644 /opt/oracle/wallet/*
 chown -R ubuntu:ubuntu /opt/oracle/wallet
 
-export TNS_ADMIN=/opt/oracle/wallet
+echo "Wallet configured at /opt/oracle/wallet"
 
-# =================================================================
-# DATABASE CONNECTION CHECK (native sqlplus)
-# =================================================================
-echo "Verifying Database Connection..."
-MAX_RETRIES=5
-RETRY_COUNT=0
-CONNECTED=false
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  OUTPUT=$(printf "SELECT 'Connection OK' FROM DUAL;\nEXIT\n" | \
-    sqlplus -L -S "admin/${db_password}@${db_service_name}" 2>&1)
-
-  if echo "$OUTPUT" | grep -q "Connection OK"; then
-    echo "Database connection verified."
-    CONNECTED=true
-    break
-  else
-    echo "Connection failed. Retrying in 10 seconds... ($((RETRY_COUNT+1))/$MAX_RETRIES)"
-    echo "Error details: $OUTPUT"
-    sleep 10
-    RETRY_COUNT=$((RETRY_COUNT+1))
-  fi
-done
-
-if [ "$CONNECTED" = false ]; then
-  echo "CRITICAL ERROR: Unable to connect to Oracle Database after $MAX_RETRIES attempts."
-  exit 1
-fi
-
-# =================================================================
-# DATABASE INITIALIZATION (native sqlplus)
-# =================================================================
-echo "Running Database Initialization Script..."
-
-cat > /opt/oracle/init.sql << SQLEOF
-${init_sql_content}
-SQLEOF
-
-sqlplus -S "admin/${db_password}@${db_service_name}" @/opt/oracle/init.sql
-echo "Database initialization complete."
 
 # =================================================================
 # .env.local GENERATION
@@ -213,18 +129,33 @@ fi
 echo "Connection string extracted for: ${db_service_name}"
 
 cat > /home/ubuntu/portfolio-oci-deployment/config/.env.local << EOF
-# ORACLE AUTONOMOUS DATABASE CONFIG
+# ================================================================
+# ORACLE AUTONOMOUS DATABASE (oracledb Thin mode)
+# ================================================================
 OCI_DB_USER=admin
 OCI_DB_PASSWORD=${db_password}
-# Full connection string from tnsnames.ora (required for oracledb Thin mode)
+# Full (description=...) string — required for Thin mode (no TNS alias resolution)
 OCI_DB_CONNECTION_STRING=$DB_CONNECT_STRING
+# Path inside the Docker container (/opt/oracle/wallet on host → /wallet in container)
 TNS_ADMIN=/wallet
+WALLET_PASSWORD=${wallet_password}
 
+# ================================================================
 # PORTFOLIO CONFIG
+# ================================================================
 PORTFOLIO_URL=https://${portfolio_domain}
 NODE_ENV=production
 
-# GitHub credentials
+# ================================================================
+# NGINX CONFIG
+# ================================================================
+NGINX_VERSION=stable-alpine
+NGINX_HTTP_PORT=80
+NGINX_HTTPS_PORT=443
+
+# ================================================================
+# GITHUB CREDENTIALS (for Watchtower CD)
+# ================================================================
 GITHUB_USER=${GITHUB_USER}
 GITHUB_TOKEN=${GIT_TOKEN_SECRET_OCID}
 
@@ -298,12 +229,40 @@ unset GITHUB_TOKEN_DATA
 chown -R ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment
 chmod +x /home/ubuntu/portfolio-oci-deployment/run-docker-compose.sh
 
-# Run as ubuntu in background — avoids cloud-init blocking on --wait healthchecks
-# Logs available at: /home/ubuntu/portfolio-oci-deployment/deploy.log
-sudo -u ubuntu bash -c '
-  cd /home/ubuntu/portfolio-oci-deployment
-  ./run-docker-compose.sh up >> /home/ubuntu/portfolio-oci-deployment/deploy.log 2>&1
-' &
+# Pre-pull all images as root so they are cached before systemd starts
+# This avoids docker group session issues (root always has socket access)
+echo "Pre-pulling Docker images..."
+docker pull ghcr.io/lasmcode/portfolio-web:latest
+docker pull nginx:stable-alpine
+docker pull containrrr/watchtower
 
-echo "Cloud-init completed successfully. Deployment running in background."
-echo "Monitor with: tail -f /home/ubuntu/portfolio-oci-deployment/deploy.log"
+# Create a systemd service to run docker-compose after cloud-init exits.
+# Background (&) processes are killed when cloud-init finishes —
+# systemd is independent and guarantees docker-compose runs to completion.
+cat > /etc/systemd/system/portfolio-deploy.service << 'SVCEOF'
+[Unit]
+Description=Portfolio Docker Compose Deployment
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=ubuntu
+WorkingDirectory=/home/ubuntu/portfolio-oci-deployment
+ExecStart=/home/ubuntu/portfolio-oci-deployment/run-docker-compose.sh up
+StandardOutput=append:/home/ubuntu/portfolio-oci-deployment/deploy.log
+StandardError=append:/home/ubuntu/portfolio-oci-deployment/deploy.log
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+systemctl daemon-reload
+systemctl enable portfolio-deploy.service
+systemctl start portfolio-deploy.service
+
+echo "Cloud-init completed successfully."
+echo "Monitor deployment: tail -f /home/ubuntu/portfolio-oci-deployment/deploy.log"
+echo "Service status:     systemctl status portfolio-deploy"
