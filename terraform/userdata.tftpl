@@ -283,15 +283,27 @@ GITHUB_TOKEN_DATA=$(oci secrets secret-bundle get \
     --raw-output --auth instance_principal | base64 --decode)
 
 echo "$GITHUB_TOKEN_DATA" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
+
+# Copy docker credentials to ubuntu — root and ubuntu have separate config.json
+# docker-compose runs as ubuntu so it needs its own copy of the credentials
+mkdir -p /home/ubuntu/.docker
+cp /root/.docker/config.json /home/ubuntu/.docker/config.json
+chown -R ubuntu:ubuntu /home/ubuntu/.docker
+
 unset GITHUB_TOKEN_DATA
 
 # =================================================================
 # DEPLOYMENT
 # =================================================================
-cd /home/ubuntu/portfolio-oci-deployment
 chown -R ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment
 chmod +x /home/ubuntu/portfolio-oci-deployment/run-docker-compose.sh
 
-su - ubuntu -c "cd /home/ubuntu/portfolio-oci-deployment && ./run-docker-compose.sh up"
+# Run as ubuntu in background — avoids cloud-init blocking on --wait healthchecks
+# Logs available at: /home/ubuntu/portfolio-oci-deployment/deploy.log
+sudo -u ubuntu bash -c '
+  cd /home/ubuntu/portfolio-oci-deployment
+  ./run-docker-compose.sh up >> /home/ubuntu/portfolio-oci-deployment/deploy.log 2>&1
+' &
 
-echo "Cloud-init completed successfully."
+echo "Cloud-init completed successfully. Deployment running in background."
+echo "Monitor with: tail -f /home/ubuntu/portfolio-oci-deployment/deploy.log"
