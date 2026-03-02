@@ -35,8 +35,7 @@ resource "oci_core_instance" "portfolio_instance" {
       portfolio_domain = var.portfolio_domain
       # Pass the Database OCID to download the wallet inside the instance
       db_id             = oci_database_autonomous_database.portfolio_adb.id
-      db_service_name   = "${oci_database_autonomous_database.portfolio_adb.db_name}_high"
-      init_sql_content  = file("${path.module}/init.sql")
+      db_service_name   = "${oci_database_autonomous_database.portfolio_adb.db_name}_low"     
 
       GIT_TOKEN_SECRET_OCID = var.git_token_secret_ocid
       GITHUB_USER           = var.github_user
