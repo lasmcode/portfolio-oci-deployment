@@ -17,15 +17,18 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-
-
+# Copy Next.js standalone build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy migration runner and SQL files into the image
-# These are NOT part of the Next.js standalone build so must be copied explicitly
+# Copy migration scripts and SQL files
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
+
+# Copy oracledb and its dependencies from node_modules
+# The standalone build does NOT include oracledb since Next.js
+# cannot statically analyze dynamic runtime DB connections.
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules/oracledb ./node_modules/oracledb
 
 USER nextjs
 
@@ -33,6 +36,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Run migrations first, then start Next.js
-# migrate.js is idempotent — safe to run on every container start
+# Run migrations first (idempotent — safe on every start), then Next.js
 CMD ["sh", "-c", "node scripts/migrate.js && node server.js"]
