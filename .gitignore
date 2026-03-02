@@ -61,3 +61,4 @@ portfolio-web/.vercel
 portfolio-web/*.tsbuildinfo
 
 .pre-commit
+update-personal-information.sql

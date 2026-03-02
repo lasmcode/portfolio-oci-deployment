@@ -109,63 +109,6 @@ chown -R ubuntu:ubuntu /opt/oracle/wallet
 
 echo "Wallet configured at /opt/oracle/wallet"
 
-
-# =================================================================
-# .env.local GENERATION
-# =================================================================
-echo "Generating .env.local configuration file..."
-mkdir -p /home/ubuntu/portfolio-oci-deployment/config
-
-# Extract the full connection string for the service alias from tnsnames.ora.
-# oracledb Thin mode does not resolve TNS aliases — needs the full (description=...) string.
-DB_CONNECT_STRING=$(grep -i "^${db_service_name}" /opt/oracle/wallet/tnsnames.ora \
-  | sed 's/^[^=]*=[ ]*//')
-
-if [ -z "$DB_CONNECT_STRING" ]; then
-  echo "ERROR: Could not extract connection string for '${db_service_name}' from tnsnames.ora"
-  grep -oP '^[a-zA-Z0-9_]+(?= =)' /opt/oracle/wallet/tnsnames.ora || true
-  exit 1
-fi
-echo "Connection string extracted for: ${db_service_name}"
-
-cat > /home/ubuntu/portfolio-oci-deployment/config/.env.local << EOF
-# ================================================================
-# ORACLE AUTONOMOUS DATABASE (oracledb Thin mode)
-# ================================================================
-OCI_DB_USER=admin
-OCI_DB_PASSWORD=${db_password}
-# Full (description=...) string — required for Thin mode (no TNS alias resolution)
-OCI_DB_CONNECTION_STRING=$DB_CONNECT_STRING
-# Path inside the Docker container (/opt/oracle/wallet on host → /wallet in container)
-TNS_ADMIN=/wallet
-WALLET_PASSWORD=${wallet_password}
-
-# ================================================================
-# PORTFOLIO CONFIG
-# ================================================================
-PORTFOLIO_URL=https://${portfolio_domain}
-NODE_ENV=production
-
-# ================================================================
-# NGINX CONFIG
-# ================================================================
-NGINX_VERSION=stable-alpine
-NGINX_HTTP_PORT=80
-NGINX_HTTPS_PORT=443
-
-# ================================================================
-# GITHUB CREDENTIALS (for Watchtower CD)
-# ================================================================
-GITHUB_USER=${GITHUB_USER}
-GITHUB_TOKEN=${GIT_TOKEN_SECRET_OCID}
-
-DOMAIN=${portfolio_domain}
-DOMAIN_WWW=www.${portfolio_domain}
-EOF
-
-chown ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment/config/.env.local
-chmod 600 /home/ubuntu/portfolio-oci-deployment/config/.env.local
-
 # =================================================================
 # FIREWALL
 # =================================================================
@@ -216,12 +159,71 @@ GITHUB_TOKEN_DATA=$(oci secrets secret-bundle get \
 echo "$GITHUB_TOKEN_DATA" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
 
 # Copy docker credentials to ubuntu — root and ubuntu have separate config.json
-# docker-compose runs as ubuntu so it needs its own copy of the credentials
 mkdir -p /home/ubuntu/.docker
 cp /root/.docker/config.json /home/ubuntu/.docker/config.json
 chown -R ubuntu:ubuntu /home/ubuntu/.docker
 
+
+# =================================================================
+# .env.local GENERATION
+# =================================================================
+echo "Generating .env.local configuration file..."
+mkdir -p /home/ubuntu/portfolio-oci-deployment/config
+
+# Extract the full connection string for the service alias from tnsnames.ora.
+# oracledb Thin mode does not resolve TNS aliases — needs the full (description=...) string.
+DB_CONNECT_STRING=$(grep -i "^${db_service_name}" /opt/oracle/wallet/tnsnames.ora \
+  | sed 's/^[^=]*=[ ]*//')
+
+if [ -z "$DB_CONNECT_STRING" ]; then
+  echo "ERROR: Could not extract connection string for '${db_service_name}' from tnsnames.ora"
+  grep -oP '^[a-zA-Z0-9_]+(?= =)' /opt/oracle/wallet/tnsnames.ora || true
+  exit 1
+fi
+echo "Connection string extracted for: ${db_service_name}"
+
+cat > /home/ubuntu/portfolio-oci-deployment/config/.env.local << EOF
+# ================================================================
+# ORACLE AUTONOMOUS DATABASE (oracledb Thin mode)
+# ================================================================
+OCI_DB_USER=admin
+OCI_DB_PASSWORD=${db_password}
+# Full (description=...) string — required for Thin mode (no TNS alias resolution)
+OCI_DB_CONNECTION_STRING=$DB_CONNECT_STRING
+# Path inside the Docker container (/opt/oracle/wallet on host → /wallet in container)
+TNS_ADMIN=/wallet
+WALLET_PASSWORD=${wallet_password}
+
+# ================================================================
+# PORTFOLIO CONFIG
+# ================================================================
+PORTFOLIO_URL=https://${portfolio_domain}
+NODE_ENV=production
+
+# ================================================================
+# NGINX CONFIG
+# ================================================================
+NGINX_VERSION=stable-alpine
+NGINX_HTTP_PORT=80
+NGINX_HTTPS_PORT=443
+
+# ================================================================
+# GITHUB CREDENTIALS (for Watchtower CD)
+# ================================================================
+GITHUB_USER=${GITHUB_USER}
+GITHUB_TOKEN=${GITHUB_TOKEN_DATA}
+
+DOMAIN=${portfolio_domain}
+DOMAIN_WWW=www.${portfolio_domain}
+EOF
+
+chown ubuntu:ubuntu /home/ubuntu/portfolio-oci-deployment/config/.env.local
+chmod 600 /home/ubuntu/portfolio-oci-deployment/config/.env.local
+
+
 unset GITHUB_TOKEN_DATA
+unset db_password
+unset wallet_password
 
 # =================================================================
 # DEPLOYMENT
