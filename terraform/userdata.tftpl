@@ -156,7 +156,7 @@ GITHUB_TOKEN_DATA=$(oci secrets secret-bundle get \
     --query 'data."secret-bundle-content".content' \
     --raw-output --auth instance_principal | base64 --decode)
 
-echo "$GITHUB_TOKEN_DATA" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
+echo "$${GITHUB_TOKEN_DATA}" | docker login ghcr.io -u "${GITHUB_USER}" --password-stdin
 
 # Copy docker credentials to ubuntu — root and ubuntu have separate config.json
 mkdir -p /home/ubuntu/.docker
@@ -211,7 +211,7 @@ NGINX_HTTPS_PORT=443
 # GITHUB CREDENTIALS (for Watchtower CD)
 # ================================================================
 GITHUB_USER=${GITHUB_USER}
-GITHUB_TOKEN=${GITHUB_TOKEN_DATA}
+GITHUB_TOKEN=$${GITHUB_TOKEN_DATA}
 
 DOMAIN=${portfolio_domain}
 DOMAIN_WWW=www.${portfolio_domain}
