@@ -1,11 +1,11 @@
 # Environment files
-.env*
+.env
 .env.local
 .env.prod
 
 # Terraform
 *.tfstate*
-*.tfvars*
+*.tfvars
 .terraform/
 .terraform.lock.hcl
 .terraform.tfstate.lock.info
@@ -49,7 +49,7 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 # portfolio-web specific
-portfolio-web/.env*
+portfolio-web/.env.local
 portfolio-web/node_modules/
 portfolio-web/.next/
 portfolio-web/out/

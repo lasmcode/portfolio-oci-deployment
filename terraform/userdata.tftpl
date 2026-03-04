@@ -117,37 +117,6 @@ iptables -I INPUT 6 -m conntrack --ctstate NEW -p tcp --dport 443 -j ACCEPT
 netfilter-persistent save
 
 # =================================================================
-# PERSISTENT BLOCK VOLUME
-# =================================================================
-echo "Configuring persistent data volume..."
-
-WAIT=0
-while [ ! -b /dev/sdb ] && [ $WAIT -lt 60 ]; do
-  echo "Waiting for block volume /dev/sdb... ($${WAIT}s)"
-  sleep 5
-  WAIT=$((WAIT+5))
-done
-
-if [ ! -b /dev/sdb ]; then
-  echo "WARNING: Block volume /dev/sdb not found. Skipping mount."
-else
-  if ! blkid /dev/sdb; then
-    echo "Formatting new block volume..."
-    mkfs.ext4 /dev/sdb
-  fi
-
-  mkdir -p /mnt/portfolio_data
-  mount /dev/sdb /mnt/portfolio_data
-
-  if ! grep -q "/dev/sdb" /etc/fstab; then
-    echo "/dev/sdb /mnt/portfolio_data ext4 defaults,nofail 0 2" >> /etc/fstab
-  fi
-
-  mkdir -p /mnt/portfolio_data/docker_data
-  chown -R ubuntu:ubuntu /mnt/portfolio_data
-fi
-
-# =================================================================
 # DOCKER AUTHENTICATION (GitHub Container Registry)
 # =================================================================
 echo "Fetching GitHub Token from OCI Vault..."

@@ -61,26 +61,6 @@ resource "oci_core_public_ip" "portfolio_reserved_ip" {
   }
 }
 
-# 1. Create a separate Block Volume for the data (Survives instance destruction)
-resource "oci_core_volume" "portfolio_data_volume" {
-  availability_domain = data.oci_identity_availability_domain.ad.name
-  compartment_id      = var.compartment_id
-  display_name        = "portfolio-data-volume"
-  size_in_gbs         = 50
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# 2. Attach the volume to the instance
-resource "oci_core_volume_attachment" "portfolio_data_attachment" {
-  attachment_type = "paravirtualized"
-  instance_id     = oci_core_instance.portfolio_instance.id
-  volume_id       = oci_core_volume.portfolio_data_volume.id
-  device          = "/dev/oracleoci/oraclevdb" # Se verá como /dev/sdb en Ubuntu
-}
-
 # AUTOMATION: Import Block (Requires Terraform 1.7+ to use variables)
 # This makes 'terraform apply' detect the existing IP and adopt it without manual commands.
 import {

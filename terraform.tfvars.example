@@ -1,0 +1,46 @@
+    # =========================================
+    # OCI Tenancy & Compartment
+    # =========================================
+    tenancy_ocid      = "ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    compartment_id    = "ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    region            = "us-ashburn-xxxxxxxxxxxx"
+    private_key_path  = "oci-api-key.pem"
+    fingerprint = "8t:r5XXXXXXXXXXXXXX"
+
+    # =========================================
+    # Instance & Network Configuration
+    # =========================================
+    availability_domain_number = 3
+    shape-instance             = "VM.Standard.E2.1.Micro"
+    ocpus                      = 1
+    memory_in_gbs              = 1
+    ubuntu_os_version          = "22.04"
+    reserved_public_ip_ocid    = "ocid1.publicip.oc1.iad..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # OCID of your reserved IP
+    admin_home_public_ip       = "YOUR.HOME.PUBLIC.IP/32" # Optional: For ADB access from home
+
+    # =========================================
+    # Database Credentials (will be passed to the instance)
+    # =========================================
+    db_password     = "YourSecureDatabasePassword123!"
+    wallet_password = "YourSecureWalletPassword456!"
+
+    # =========================================
+    # GitHub
+    # =========================================
+    github_repo      = "git@github.com:your-user/your-private-app-repo.git"
+    github_user      = "your-github-username"
+    
+
+    # =========================================
+    # OCI Vault Secret OCIDs (CRITICAL)
+    # =========================================
+    ssh_deploy_key_ocid       = "ocid1.vaultsecret.oc1.iad..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    admin_ssh_public_key_ocid = "ocid1.vaultsecret.oc1.iad..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    git_token_secret_ocid     = "ocid1.vaultsecret.oc1.iad..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    
+
+    # =========================================
+    # cloudFlare & Domain Configuration
+    # =========================================
+    cloudflare_api_token = "xxxxxxxxxxxxxxxxxxx"
+    portfolio_domain = "tudominio.com"

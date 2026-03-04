@@ -17,7 +17,7 @@ export default async function Home() {
       PORTFOLIO_QUERY,
       {id: APP_CONFIG.USER_ID}
     );
-     console.log("return query   ",result);
+     
     // Oracle retorna el JSON como un string en la columna FULL_DATA
     data = result?.FULL_DATA ? JSON.parse(result.FULL_DATA) : null;
 
