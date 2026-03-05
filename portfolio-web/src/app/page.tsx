@@ -1,5 +1,6 @@
 
 import { executeQuerySingle } from '@/lib/db';
+export const dynamic = 'force-dynamic';
 import { PORTFOLIO_QUERY, MOCK_DATA, APP_CONFIG } from '@/utils/constantsServer';
 import HeroSection from "@/components/HeroSection";
 import ExperienceSection from "@/components/ExperienceSection";

@@ -1,4 +1,8 @@
 #!/bin/bash
+# =================================================================
+# ENVIRONMENT SETUP
+# =================================================================
+export OCI_CLI_AUTH=instance_principal
 
 # Redirect logs so you can debug if something goes wrong
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
@@ -11,15 +15,25 @@ echo "Starting configuration with Cloud-init..."
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python3-pip unzip curl wget \
-  alien libaio1 \
   iptables-persistent netfilter-persistent
 
 pip3 install oci-cli --upgrade
 
 # =================================================================
-# ENVIRONMENT SETUP
+# SWAP (critical for VM.Standard.E2.1.Micro — only 1GB RAM)
+# Docker + Next.js + Nginx + Watchtower can exceed 1GB without swap
 # =================================================================
-export OCI_CLI_AUTH=instance_principal
+if [ ! -f /swapfile ]; then
+  echo "Configuring 2GB swap..."
+  fallocate -l 2G /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  echo 'vm.swappiness=10' >> /etc/sysctl.conf
+  sysctl -p
+  echo "Swap configured: $(free -h | grep Swap)"
+fi
 
 # =================================================================
 # SSH DIRECTORY PREPARATION

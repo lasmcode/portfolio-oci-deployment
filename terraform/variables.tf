@@ -124,3 +124,10 @@ variable "admin_home_public_ip" {
   description = "Public IP address of the home network for administrative access"
   sensitive   = true
 }
+
+
+variable "region" {
+  description = "The region for the OCI resources"
+  type        = string
+  sensitive   = true
+}

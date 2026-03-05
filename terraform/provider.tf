@@ -12,14 +12,28 @@ terraform {
   }
 }
 
+# Default provider — used by all resources that don't specify a provider alias
+# (VCN, Compute, Database, Object Storage, etc.)
 provider "oci" {
-  alias                = "homeregion"
-  tenancy_ocid         = var.tenancy_ocid
-  user_ocid            = var.user_ocid
-  fingerprint          = var.fingerprint
-  private_key_path     = var.private_key_path
-  region               = data.oci_identity_region_subscriptions.region_info.region_subscriptions[0].region_name
-  disable_auto_retries = "true"
+  tenancy_ocid           = var.tenancy_ocid
+  user_ocid              = var.user_ocid
+  fingerprint            = var.fingerprint
+  private_key_path       = var.private_key_path
+  region                 = var.region
+  retry_duration_seconds = 600
+}
+
+# Home region provider — required specifically for IAM resources
+# (Dynamic Groups, Policies, Compartments) which must be created
+# in the tenancy home region regardless of where other resources live
+provider "oci" {
+  alias                  = "homeregion"
+  tenancy_ocid           = var.tenancy_ocid
+  user_ocid              = var.user_ocid
+  fingerprint            = var.fingerprint
+  private_key_path       = var.private_key_path
+  region                 = data.oci_identity_region_subscriptions.region_info.region_subscriptions[0].region_name
+  retry_duration_seconds = 600
 }
 
 provider "cloudflare" {

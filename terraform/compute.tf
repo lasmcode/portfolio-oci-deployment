@@ -6,9 +6,14 @@ resource "oci_core_instance" "portfolio_instance" {
   display_name        = "portfolio-instance"
   shape               = var.shape-instance
 
-  shape_config {
-    ocpus         = var.ocpus
-    memory_in_gbs = var.memory_in_gbs
+  # shape_config only applies to Flex shapes (VM.Standard.A1.Flex, E4 Flex, etc.)
+  # VM.Standard.E2.1.Micro is a fixed shape — OCI rejects the request if shape_config is sent
+  dynamic "shape_config" {
+    for_each = var.shape-instance == "VM.Standard.E2.1.Micro" ? [] : [1]
+    content {
+      ocpus         = var.ocpus
+      memory_in_gbs = var.memory_in_gbs
+    }
   }
   create_vnic_details {
     subnet_id        = oci_core_subnet.portfolio_public_subnet.id
