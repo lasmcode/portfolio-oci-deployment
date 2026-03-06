@@ -13,7 +13,7 @@ export default function ExperienceCard({ experience }: ExperienceCardProps) {
     if (!date) return '';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-    return dateObj.toLocaleDateString('es-ES', {
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       timeZone: 'UTC'
@@ -21,7 +21,7 @@ export default function ExperienceCard({ experience }: ExperienceCardProps) {
   };
 
   const startDate = formatDate(experience.start_date);
-  const endDate = experience.end_date ? formatDate(experience.end_date) : 'Presente';
+  const endDate = experience.end_date ? formatDate(experience.end_date) : 'Present';
 
   return (
     <div className="relative pl-8 pb-12 last:pb-0">
