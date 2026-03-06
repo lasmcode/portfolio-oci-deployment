@@ -5,7 +5,8 @@ export const PORTFOLIO_QUERY = `
               'name' VALUE name,
               'professional_title' VALUE professional_title,
               'about' VALUE about,
-              'location' VALUE location
+              'location' VALUE location,
+              'photo_url' VALUE photo_url
           ) FROM users WHERE id = :id
       ),
       'experiences' VALUE (
@@ -27,7 +28,7 @@ export const PORTFOLIO_QUERY = `
                   'technologies' VALUE technologies,
                   'github_link' VALUE github_link,
                   'image_url' VALUE image_url
-              )
+              ) ORDER BY id DESC
           ) FROM projects WHERE user_id = :id
       ),
       'certifications' VALUE (
@@ -37,7 +38,7 @@ export const PORTFOLIO_QUERY = `
                   'organization' VALUE organization,
                   'url_file' VALUE url_file,
                   'badge_url' VALUE badge_url
-              )
+              ) ORDER BY id DESC
           ) FROM certifications WHERE user_id = :id AND is_active = 1
       ),
       'social_links' VALUE (
@@ -46,8 +47,9 @@ export const PORTFOLIO_QUERY = `
                   'platform' VALUE platform,
                   'url' VALUE url
               )
-          ) FROM social_links WHERE user_id = :id
+          ) FROM social_links WHERE user_id = :id AND is_active = 1
       )
+      RETURNING CLOB
   ) as full_data FROM dual
 `;
 

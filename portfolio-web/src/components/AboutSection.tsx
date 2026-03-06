@@ -1,5 +1,5 @@
 import { User } from '@/lib/types';
-import { SECTIONS } from '@/utils/constants';
+import { PERSONAL_QUOTE, SECTIONS, SECTION_TITLES } from '@/utils/constants';
 
 interface AboutSectionProps {
   data: User;
@@ -13,7 +13,7 @@ export default function AboutSection({ data }: AboutSectionProps) {
     <section id={SECTIONS.ABOUT} className="py-20 px-6 rounded-3xl shadow-lg" style={{ background: 'rgba(30,41,59,0.7)' }}>
       <div className="max-w-4xl mx-auto">
         <div className="mb-12">
-          <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>Sobre Mí</h2>
+          <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>{SECTION_TITLES.ABOUT}</h2>
           <div className="h-1 w-20 rounded" style={{ background: 'var(--primary)' }}></div>
         </div>
 
@@ -26,8 +26,7 @@ export default function AboutSection({ data }: AboutSectionProps) {
             </p>
 
             <p className="text-md leading-relaxed italic border-l-4 pl-4" style={{ color: 'var(--accent)', borderColor: 'var(--primary)' }}>
-              "Mi enfoque es crear experiencias digitales escalables, seguras y
-              optimizadas, aprovechando el poder de la nube y las bases de datos modernas."
+              "{PERSONAL_QUOTE}"
             </p>
           </div>
 

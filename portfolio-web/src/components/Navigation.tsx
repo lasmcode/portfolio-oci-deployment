@@ -54,7 +54,10 @@ export default function Navigation() {
             <button
               key={id}
               onClick={() => scrollToSection(id)}
-              className="text-sm font-medium text-slate-300 hover:text-blue-400 transition-colors"
+              className="text-sm font-medium text-slate-300 hover:text-blue-400 transition-colors tracking-wider"
+              style={{
+                fontFamily: 'var(--font-headings)'
+              }}
             >
               {key.charAt(0) + key.slice(1).toLowerCase()}
             </button>

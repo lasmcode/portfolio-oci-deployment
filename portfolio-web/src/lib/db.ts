@@ -9,6 +9,8 @@
 
 import oracledb from 'oracledb';
 
+oracledb.fetchAsString = [ oracledb.CLOB ]; 
+
 let pool: oracledb.Pool | null = null;
 
 /**

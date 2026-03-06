@@ -1,6 +1,6 @@
 import { Experience } from '@/lib/types';
 import ExperienceCard from './ExperienceCard';
-import { SECTIONS } from '@/utils/constants';
+import { SECTIONS, SECTION_TITLES } from '@/utils/constants';
 
 interface ExperienceSectionProps {
   data: Experience[];
@@ -15,7 +15,7 @@ export default function ExperienceSection({ data }: ExperienceSectionProps) {
   return (
     <section id={SECTIONS.EXPERIENCE} className="py-20 px-6 rounded-3xl shadow-lg" style={{ background: 'rgba(30,41,59,0.7)' }}>
       <div className="mb-12">
-        <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>Experiencia Laboral</h2>
+        <h2 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>{SECTION_TITLES.EXPERIENCE}</h2>
         <div className="h-1 w-20 rounded" style={{ background: 'var(--primary)' }}></div>
       </div>
 

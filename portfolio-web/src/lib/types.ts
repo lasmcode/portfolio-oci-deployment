@@ -11,6 +11,8 @@ export interface User {
   location?: string;
   email?: string;
   created_at?: Date | string;
+  photo_url?: string;
+  summary?: string;
 }
 
 export interface Experience {
@@ -31,7 +33,7 @@ export interface Project {
   image_url?: string;
   github_link?: string;
   demo_link?: string;
-  technologies?: string; // "React, TypeScript, Tailwind"
+  technologies?: string; 
 }
 
 export interface Certification {
@@ -50,6 +52,7 @@ export interface SocialLink {
   user_id?: number;
   platform: string;
   url: string;
+  is_active?: number;
   icon_url?: string | null;
 }
 

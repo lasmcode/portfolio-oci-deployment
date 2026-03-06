@@ -9,6 +9,18 @@ export const SECTIONS = {
   ABOUT: 'about',
 } as const;
 
+// Titulos de las secciones
+export const SECTION_TITLES = {
+  ABOUT: 'About Me',
+  EXPERIENCE: 'Work Experience',
+  PROJECTS: 'Featured Projects',
+  CERTIFICATIONS: 'Certifications',
+} as const;
+
+// Cita personal o lema
+export const PERSONAL_QUOTE =
+  'Mi enfoque es crear experiencias digitales escalables, seguras y optimizadas, aprovechando el poder de la nube y las bases de datos modernas.';
+
 // URLs internas de API
 export const API_ENDPOINTS = {
   USER: '/api/user',
