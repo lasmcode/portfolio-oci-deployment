@@ -9,7 +9,7 @@ export const SECTIONS = {
   ABOUT: 'about',
 } as const;
 
-// Titulos de las secciones
+
 export const SECTION_TITLES = {
   ABOUT: 'About Me',
   EXPERIENCE: 'Work Experience',
@@ -17,11 +17,10 @@ export const SECTION_TITLES = {
   CERTIFICATIONS: 'Certifications',
 } as const;
 
-// Cita personal o lema
-export const PERSONAL_QUOTE =
-  'Mi enfoque es crear experiencias digitales escalables, seguras y optimizadas, aprovechando el poder de la nube y las bases de datos modernas.';
 
-// URLs internas de API
+export const PERSONAL_QUOTE ='I don\'t just build software; I design resilient architectures where automation is the norm and scalability is the standard.';
+
+
 export const API_ENDPOINTS = {
   USER: '/api/user',
   EXPERIENCES: '/api/experiences',
@@ -29,7 +28,7 @@ export const API_ENDPOINTS = {
   SOCIAL_LINKS: '/api/social-links',
 } as const;
 
-// Mapeo de plataformas a iconos/colores
+
 export const SOCIAL_PLATFORMS = {
   twitter: { name: 'Twitter', color: '#1DA1F2', icon: '𝕏' },
   linkedin: { name: 'LinkedIn', color: '#0077B5', icon: '🔗' },
@@ -38,7 +37,7 @@ export const SOCIAL_PLATFORMS = {
   dribbble: { name: 'Dribbble', color: '#EA4C89', icon: '🎨' },
 } as const;
 
-// Breakpoints Tailwind (para referencia)
+
 export const BREAKPOINTS = {
   SM: '640px',
   MD: '768px',

@@ -6,7 +6,8 @@ export const PORTFOLIO_QUERY = `
               'professional_title' VALUE professional_title,
               'about' VALUE about,
               'location' VALUE location,
-              'photo_url' VALUE photo_url
+              'photo_url' VALUE photo_url,
+              'summary' VALUE summary
           ) FROM users WHERE id = :id
       ),
       'experiences' VALUE (

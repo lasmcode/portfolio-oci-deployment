@@ -1,5 +1,6 @@
 import { User } from '@/lib/types';
 import { PERSONAL_QUOTE, SECTIONS, SECTION_TITLES } from '@/utils/constants';
+import TechGrid from '@/components/TechGrid'; // Importación limpia desde components
 
 interface AboutSectionProps {
   data: User;
@@ -20,25 +21,23 @@ export default function AboutSection({ data }: AboutSectionProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
 
           <div className="md:col-span-2">
-
             <p className="text-lg leading-relaxed mb-6 whitespace-pre-line" style={{ color: 'var(--text-secondary)' }}>
               {data.about}
             </p>
 
-            <p className="text-md leading-relaxed italic border-l-4 pl-4" style={{ color: 'var(--accent)', borderColor: 'var(--primary)' }}>
+            <p className="text-lg leading-relaxed italic border-l-4 pl-4 font-headings" style={{ color: 'var(--accent)', borderColor: 'var(--primary)', fontFamily: 'var(--font-headings)'}}>
               "{PERSONAL_QUOTE}"
             </p>
           </div>
 
-          {/* Elemento Visual / Decorativo */}
+          {/* Elemento Visual: Bento Grid Tecnológico */}
           <div className="flex justify-center relative">
-            <div className="w-48 h-48 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] p-1 transform rotate-3 hover:rotate-0 transition-transform duration-500 shadow-2xl">
-              <div className="w-full h-full rounded-2xl flex items-center justify-center overflow-hidden border-2" style={{ background: 'var(--card)', borderColor: 'var(--panel)' }}>
-                 <span className="text-6xl" role="img" aria-label="developer">👨‍💻</span>
-              </div>
+            <div className="w-64 h-64 rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 shadow-2xl border border-slate-700/50 flex items-center justify-center overflow-hidden transform rotate-2 hover:rotate-0 transition-all duration-500">
+                <TechGrid />
             </div>
             {/* Glow decorativo de fondo */}
-            <div className="absolute -z-10 w-32 h-32 blur-3xl rounded-full -top-4 -right-4" style={{ background: 'var(--primary)', opacity: 0.2 }}></div>
+            <div className="absolute -z-10 w-48 h-48 blur-[80px] rounded-full -top-10 -right-10" 
+                 style={{ background: 'var(--primary)', opacity: 0.15 }}></div>
           </div>
         </div>
       </div>
