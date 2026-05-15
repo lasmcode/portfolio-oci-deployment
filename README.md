@@ -18,42 +18,81 @@
 ---
 ## Architecture
 
-```
-                        ┌─────────────────────────────────────────────────────────┐
-                        │                    OCI Always Free                      │
-  User                  │                                                         │
-   │                    │   ┌─────────────────────────────────────────────────┐   │
-   │  HTTPS             │   │           Compute Instance (Ampere A1)          │   │
-   ▼                    │   │                                                 │   │
-┌──────────┐  Origin    │   │  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │   │
-│Cloudflare│  Cert TLS  │   │  │  Nginx   │  │ Next.js  │  │  Watchtower  │   │   │
-│  Proxy   │──────────▶│   │  │  :443    │─▶│  :3000   │  │  (CD agent)  │   │   │
-└──────────┘            │   │  └──────────┘  └────┬─────┘  └──────────────┘   │   │
-                        │   │                      │                          │   │
-                        │   │              ┌───────▼──────┐                   │   │
-                        │   │              │  Oracle ADB  │                   │   │
-                        │   │              │  Autonomous  │                   │   │
-                        │   │              │  Database    │                   │   │
-                        │   │              └──────────────┘                   │   │
-                        │   └─────────────────────────────────────────────────┘   │
-                        │                                                         │
-                        │   ┌────────────┐                      ┌──────────────┐  │
-                        │   │ OCI Vault  │                      │  Dynamic     │  │
-                        │   │ (Secrets)  │                      │  Group + IAM │  │
-                        │   └────────────┘                      └──────────────┘  │
-                        └─────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    %% Node Styles
+    classDef cloud fill:#232F3E,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef compute fill:#0070c0,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef container fill:#fff,stroke:#333,stroke-width:1px,color:#333;
+    classDef external fill:#f68d37,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef github fill:#24292e,stroke:#fff,stroke-width:1px,color:#fff;
+    classDef tool fill:#f4f4f4,stroke:#333,stroke-width:1px,color:#333;
 
-  GitHub                     CI/CD Flow
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │  push to main                                                        │
-  │       │                                                              │
-  │       ▼                                                              │
-  │  GitHub Actions ──▶ Build Docker Image ──▶ Push to GHCR             │
-  │                                                    │                 │
-  │                                          Watchtower detects          │
-  │                                          new image ──▶ Auto-deploy   │
-  └──────────────────────────────────────────────────────────────────────┘
-```
+    %% External
+    User((User))
+    CF[Cloudflare Proxy<br/>HTTPS + TLS Origin Cert]
+    User -->|HTTPS| CF
+
+    %% CI/CD Flow
+    subgraph GHA [GitHub CI/CD Flow]
+        direction LR
+        Push(git push to main)
+        Build(Build Docker Image)
+        PushG(Push to GHCR)
+        Push -->|Triggers| GHA_A[GitHub Actions]
+        GHA_A --> Build
+        Build --> PushG
+    end
+
+    %% Infrastructure as Code
+    subgraph IaC [Infrastructure as Code]
+        direction TB
+        TF[Terraform OCI Provider]
+        HCL(HCL Configuration)
+        HCL --> TF
+    end
+
+    %% OCI Cloud
+    subgraph OCI [Oracle Cloud Infrastructure Always Free]
+        direction TB
+
+        TF -.->|Provision| Comp
+        TF -.->|Provision| Vault
+        TF -.->|Provision| IAM
+
+        subgraph Comp [Compute Instance AMD EPYC]
+            direction TB
+            subgraph K8s [Dockerized Environment]
+                Nginx[Nginx Proxy<br/>:443]
+                NextJS[Next.js App<br/>:3000]
+                Watch[Watchtower CD]
+            end
+        end
+
+        ADB[(Oracle ADB)]
+        Vault[OCI Vault<br/>Secrets Management]
+        IAM[Dynamic Groups<br/>+ IAM Policies]
+    end
+
+    %% Technical Connections
+    CF -->|TLS| Nginx
+    Nginx --> NextJS
+    NextJS --> ADB
+    NextJS -.->|Auth| Vault
+    NextJS -.->|Role| IAM
+
+    %% Continuous Deployment Flow
+    PushG -->|Check New Image| Watch
+    Watch -->|Auto-deploy| NextJS
+
+    %% Class Assignments
+    class CF,User external;
+    class OCI cloud;
+    class Comp,ADB compute;
+    class GHA_A,Push,Build,PushG,GHA github;
+    class TF,HCL tool;
+    class Nginx,NextJS,Watch,K8s container;
+    class Vault,IAM tool;
 
 ---
 ## Tech Stack
