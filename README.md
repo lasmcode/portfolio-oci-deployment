@@ -17,7 +17,6 @@
 
 ---
 ## Architecture
-
 ```mermaid
 graph TD
     %% Node Styles
