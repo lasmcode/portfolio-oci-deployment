@@ -17,6 +17,7 @@
 
 ---
 ## Architecture
+
 ```mermaid
 graph TD
     %% Node Styles
@@ -29,15 +30,16 @@ graph TD
 
     %% External
     User((User))
-    CF[Cloudflare Proxy<br/>HTTPS + TLS Origin Cert]
+    CF[Cloudflare Proxy\nHTTPS + TLS Origin Cert]
     User -->|HTTPS| CF
 
     %% CI/CD Flow
     subgraph GHA [GitHub CI/CD Flow]
         direction LR
-        Push(git push to main)
-        Build(Build Docker Image)
-        PushG(Push to GHCR)
+        Push[git push to main]
+        Build[Build Docker Image]
+        PushG[Push to GHCR]
+
         Push -->|Triggers| GHA_A[GitHub Actions]
         GHA_A --> Build
         Build --> PushG
@@ -47,7 +49,8 @@ graph TD
     subgraph IaC [Infrastructure as Code]
         direction TB
         TF[Terraform OCI Provider]
-        HCL(HCL Configuration)
+        HCL[HCL Configuration]
+
         HCL --> TF
     end
 
@@ -61,16 +64,17 @@ graph TD
 
         subgraph Comp [Compute Instance AMD EPYC]
             direction TB
+
             subgraph K8s [Dockerized Environment]
-                Nginx[Nginx Proxy<br/>:443]
-                NextJS[Next.js App<br/>:3000]
+                Nginx[Nginx Proxy\n:443]
+                NextJS[Next.js App\n:3000]
                 Watch[Watchtower CD]
             end
         end
 
         ADB[(Oracle ADB)]
-        Vault[OCI Vault<br/>Secrets Management]
-        IAM[Dynamic Groups<br/>+ IAM Policies]
+        Vault[OCI Vault\nSecrets Management]
+        IAM[Dynamic Groups\n+ IAM Policies]
     end
 
     %% Technical Connections
@@ -92,6 +96,7 @@ graph TD
     class TF,HCL tool;
     class Nginx,NextJS,Watch,K8s container;
     class Vault,IAM tool;
+```
 
 ---
 ## Tech Stack
